@@ -41,8 +41,6 @@ def main():
                        help=f"Directory to save session XML files (default: {DEFAULT_OUTPUT_DIR})")
     
     # Mode overrides
-    parser.add_argument("--mode", choices=["human", "dry-run"], 
-                       help="API mode override (claude mode auto-determined by model name)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     
     args = parser.parse_args()
@@ -52,14 +50,7 @@ def main():
         logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     else:
         logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
-    
-    # Handle mode overrides for testing
-    if args.mode in ["human", "dry-run"]:
-        print(f"Mode override: {args.mode}")
-        print(f"Would execute tree with prompt: {args.prompt}")
-        print(f"Tree depth: {args.tree_depth}")
-        return 0
-    
+
     try:
         # Load README content for parent and leaf nodes
         parent_readme_content = FileManager.load_readme_content(args.parent_readme_file)

@@ -48,7 +48,7 @@ class Session:
         
         # Add notes and ask/response cycles
         note_idx = 0
-        for i, ask_resp in enumerate(self.ask_responses):
+        for ask_resp in self.ask_responses:
             # Add note before ask if available
             if note_idx < len(self.notes):
                 xml += f"  <notes>\n    {self.notes[note_idx]}\n  </notes>\n"
