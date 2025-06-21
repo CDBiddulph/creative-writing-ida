@@ -19,6 +19,8 @@ def main():
                        help="Use the prompt directly instead of the fiction_leaf_prompt.md template")
     parser.add_argument("--readme-file", default="prompts/fiction_leaf_readme.md",
                        help="Path to README file for base model mode (default: prompts/fiction_leaf_readme.md)")
+    parser.add_argument("--examples-file", 
+                       help="Path to XML file containing example transcripts to include")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     
     args = parser.parse_args()
@@ -50,6 +52,15 @@ def main():
             print(f"Warning: README file {args.readme_file} not found. Using default content.")
             readme_content = "# Fiction Leaf Experiments\n\nTranscripts of delegated microfiction experiments."
     
+    # Load examples XML if provided
+    examples_xml = ""
+    if args.examples_file:
+        try:
+            with open(args.examples_file, 'r', encoding='utf-8') as f:
+                examples_xml = f.read().strip()
+        except FileNotFoundError:
+            print(f"Warning: Examples file {args.examples_file} not found. Continuing without examples.")
+    
     # Get API interface
     api = get_api_interface(claude_mode, readme_content=readme_content)
     
@@ -77,12 +88,13 @@ def main():
             final_prompt = args.prompt
     
     try:
-        # Call the API with raw prompt
+        # Call the API with raw prompt and examples
         result = api.call(
             prompt=final_prompt,
             model=args.model,
             max_tokens=args.max_tokens,
-            temperature=args.temperature
+            temperature=args.temperature,
+            examples_xml=examples_xml
         )
         
         # Print the result

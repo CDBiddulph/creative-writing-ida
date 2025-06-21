@@ -16,7 +16,7 @@ class APIInterface(ABC):
     """Abstract interface for API implementations."""
     
     @abstractmethod
-    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7) -> str:
+    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7, examples_xml: str = "") -> str:
         """
         Call the API with a raw prompt string.
         
@@ -25,6 +25,7 @@ class APIInterface(ABC):
             model: Model to use (may be ignored for human interface)
             max_tokens: Maximum tokens to generate (may be ignored for human interface)
             temperature: Temperature for generation (may be ignored for human interface)
+            examples_xml: Optional XML examples to include
             
         Returns:
             Generated response text
@@ -50,17 +51,24 @@ class ClaudeCompletionsAPI(APIInterface):
         """Initialize Claude Completions API."""
         self.readme_content = readme_content
     
-    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7) -> str:
+    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7, examples_xml: str = "") -> str:
         """Call the Claude Completions API with constructed prompt."""
         # Construct the full prompt with README and XML transcript
         readme_content = self.readme_content or "# Fiction Leaf Experiments\n\nTranscripts of delegated microfiction experiments."
         
-        full_prompt = f"""{readme_content}
-## Transcripts
-
-<session>
+        # Build the transcripts section
+        transcripts_section = "## Transcripts\n\n"
+        
+        # Add examples if provided
+        if examples_xml:
+            transcripts_section += examples_xml + "\n\n"
+        
+        # Add the current session
+        transcripts_section += f"""<session>
 <prompt>{prompt}</prompt>
 <submit>"""
+        
+        full_prompt = readme_content + "\n\n" + transcripts_section
         
         logging.info(f"Sending request to Claude Completions API...")
         shortened_prompt = _shorten_for_logging(full_prompt)
@@ -93,7 +101,7 @@ class ClaudeBaseModelAPI(APIInterface):
         """Initialize Claude Base Model API (uses messages API only)."""
         self.readme_content = readme_content
     
-    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7) -> str:
+    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7, examples_xml: str = "") -> str:
         """Call the Claude API in base model mode using CLI simulation."""
         logging.info(f"Sending request to Claude Base Model API...")
         shortened_prompt = _shorten_for_logging(prompt)
@@ -111,8 +119,12 @@ class ClaudeBaseModelAPI(APIInterface):
         # Use the README content passed in during initialization
         readme_content = self.readme_content or "# Fiction Leaf Experiments\n\nTranscripts of delegated microfiction experiments."
         
-        # Create the transcript XML with the user's prompt
-        transcript_xml = f"""<session>
+        # Create the transcript XML with examples and user's prompt
+        transcript_xml = ""
+        if examples_xml:
+            transcript_xml += examples_xml + "\n\n"
+        
+        transcript_xml += f"""<session>
 <prompt>{prompt}</prompt>
 <submit>"""
         
@@ -146,7 +158,7 @@ class ClaudeBaseModelAPI(APIInterface):
 class HumanAPI(APIInterface):
     """Human input implementation for testing."""
     
-    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7) -> str:
+    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7, examples_xml: str = "") -> str:
         """Get human input through CLI."""
         print("\n" + "=" * 80)
         print("HUMAN INPUT MODE")
@@ -199,7 +211,7 @@ class HumanAPI(APIInterface):
 class DryRunAPI(APIInterface):
     """Dry run implementation that shows the prompt without calling any API."""
     
-    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7) -> str:
+    def call(self, prompt: str, model: str, max_tokens: int, temperature: float = 0.7, examples_xml: str = "") -> str:
         """Show the prompt that would be sent."""
         print("=== DRY RUN: Showing the prompt that would be sent to Claude ===")
         print(f"Model: {model}")
@@ -218,7 +230,7 @@ def get_api_interface(mode: str, readme_content: str = "") -> APIInterface:
     
     Args:
         mode: 'claude-completions', 'claude-base', 'human', or 'dry-run'
-        readme_content: README content string for claude-base mode
+        readme_content: README content string for claude modes
         
     Returns:
         Appropriate API interface instance
