@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+  <session>
+    <prompt>Write a story using the following prompt: A human and elf enter a romantic relationship, but the elf's long lifespan makes things weird.</prompt>
+    <submit>ERROR: Transcript file appears to be a placeholder or template. No actual transcripts have been written yet.</submit></submit>
+  </session>
+
+  <session>
+    <response-id>0</response-id>
+    <prompt></prompt>
+    <submit></submit></submit>
+  </session>
+
+</sessions>

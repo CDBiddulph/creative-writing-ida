@@ -1,26 +1,48 @@
 #!/usr/bin/env python3
-"""Simple script to test API interfaces with command line arguments."""
+"""Hierarchical tree simulation for fiction writing experiments."""
 
 import argparse
 import logging
 import os
-from api_interface import get_api_interface
+from config import (
+    DEFAULT_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE, DEFAULT_TREE_DEPTH,
+    DEFAULT_PARENT_README, DEFAULT_LEAF_README, DEFAULT_OUTPUT_DIR
+)
+from tree_builder import TreeBuilder
+from session_runner import SessionRunner
+from file_manager import FileManager
 
 def main():
-    parser = argparse.ArgumentParser(description="Test API interface with a prompt")
-    parser.add_argument("--prompt", required=True, help="The prompt to send to the API")
-    parser.add_argument("--max-tokens", type=int, default=2048, help="Maximum tokens to generate (default: 2048)")
-    parser.add_argument("--temperature", type=float, default=0.7, help="Temperature for generation (default: 0.7)")
+    parser = argparse.ArgumentParser(description="Hierarchical tree simulation for fiction writing experiments")
+    
+    # Core arguments
+    parser.add_argument("--prompt", required=True, help="The initial prompt for the root session")
+    parser.add_argument("--model", default=DEFAULT_MODEL, 
+                       help=f"Model to use. Can be short name (opus, sonnet, haiku, big-base, little-base) or full model name (default: {DEFAULT_MODEL})")
+    parser.add_argument("--max-tokens", type=int, default=DEFAULT_MAX_TOKENS, 
+                       help=f"Maximum tokens to generate (default: {DEFAULT_MAX_TOKENS})")
+    parser.add_argument("--temperature", type=float, default=DEFAULT_TEMPERATURE, 
+                       help=f"Temperature for generation (default: {DEFAULT_TEMPERATURE})")
+    
+    # Tree structure arguments
+    parser.add_argument("--tree-depth", type=int, default=DEFAULT_TREE_DEPTH,
+                       help=f"Number of levels in the tree (default: {DEFAULT_TREE_DEPTH})")
+    
+    # File path arguments
+    parser.add_argument("--parent-readme-file", default=DEFAULT_PARENT_README,
+                       help=f"Path to README file for parent nodes (default: {DEFAULT_PARENT_README})")
+    parser.add_argument("--leaf-readme-file", default=DEFAULT_LEAF_README,
+                       help=f"Path to README file for leaf nodes (default: {DEFAULT_LEAF_README})")
+    parser.add_argument("--parent-examples-file", 
+                       help="Path to XML file containing example transcripts for parent nodes")
+    parser.add_argument("--leaf-examples-file", 
+                       help="Path to XML file containing example transcripts for leaf nodes")
+    parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR,
+                       help=f"Directory to save session XML files (default: {DEFAULT_OUTPUT_DIR})")
+    
+    # Mode overrides
     parser.add_argument("--mode", choices=["human", "dry-run"], 
-                       help="API mode to use (claude mode auto-determined by model name)")
-    parser.add_argument("--model", default="claude-3-5-haiku-20241022", 
-                       help="Model to use (default: claude-3-5-haiku-20241022)")
-    parser.add_argument("--raw-prompt", action="store_true",
-                       help="Use the prompt directly instead of the fiction_leaf_prompt.md template")
-    parser.add_argument("--readme-file", default="prompts/fiction_leaf_readme.md",
-                       help="Path to README file for base model mode (default: prompts/fiction_leaf_readme.md)")
-    parser.add_argument("--examples-file", 
-                       help="Path to XML file containing example transcripts to include")
+                       help="API mode override (claude mode auto-determined by model name)")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     
     args = parser.parse_args()
@@ -31,77 +53,69 @@ def main():
     else:
         logging.basicConfig(level=logging.WARNING, format='%(levelname)s: %(message)s')
     
-    # Determine Claude API mode based on model name
-    if args.mode:
-        # Use explicitly set mode (human or dry-run)
-        claude_mode = args.mode
-    elif args.model.startswith("as-hackathon"):
-        # Use completions for as-hackathon models
-        claude_mode = "claude-completions"
-    else:
-        # Use base model CLI simulation for other models
-        claude_mode = "claude-base"
-    
-    # Load README content for both Claude modes
-    readme_content = ""
-    if claude_mode in ["claude-base", "claude-completions"]:
-        try:
-            with open(args.readme_file, 'r', encoding='utf-8') as f:
-                readme_content = f.read()
-        except FileNotFoundError:
-            print(f"Warning: README file {args.readme_file} not found. Using default content.")
-            readme_content = "# Fiction Leaf Experiments\n\nTranscripts of delegated microfiction experiments."
-    
-    # Load examples XML if provided
-    examples_xml = ""
-    if args.examples_file:
-        try:
-            with open(args.examples_file, 'r', encoding='utf-8') as f:
-                examples_xml = f.read().strip()
-        except FileNotFoundError:
-            print(f"Warning: Examples file {args.examples_file} not found. Continuing without examples.")
-    
-    # Get API interface
-    api = get_api_interface(claude_mode, readme_content=readme_content)
-    
-    # Prepare the prompt
-    if args.raw_prompt or claude_mode in ["claude-base", "claude-completions"]:
-        # For raw prompt, base model mode, or completions mode, use the prompt directly
-        final_prompt = args.prompt
-    else:
-        # Load and format the fiction_leaf_prompt.md template
-        template_path = "fiction_leaf_prompt.md"
-        try:
-            with open(template_path, 'r', encoding='utf-8') as f:
-                template = f.read()
-            
-            # Format the template with the prompt and empty example_sessions
-            final_prompt = template.format(
-                prompt=args.prompt,
-                example_sessions=""
-            )
-        except FileNotFoundError:
-            print(f"Warning: Template file {template_path} not found. Using raw prompt.")
-            final_prompt = args.prompt
-        except Exception as e:
-            print(f"Warning: Error loading template: {e}. Using raw prompt.")
-            final_prompt = args.prompt
+    # Handle mode overrides for testing
+    if args.mode in ["human", "dry-run"]:
+        print(f"Mode override: {args.mode}")
+        print(f"Would execute tree with prompt: {args.prompt}")
+        print(f"Tree depth: {args.tree_depth}")
+        return 0
     
     try:
-        # Call the API with raw prompt and examples
-        result = api.call(
-            prompt=final_prompt,
+        # Load README content for parent and leaf nodes
+        parent_readme_content = FileManager.load_readme_content(args.parent_readme_file)
+        leaf_readme_content = FileManager.load_readme_content(args.leaf_readme_file)
+        
+        # Load examples XML if provided
+        parent_examples_xml = FileManager.load_examples_xml(args.parent_examples_file)
+        leaf_examples_xml = FileManager.load_examples_xml(args.leaf_examples_file)
+        
+        # Build the tree structure
+        builder = TreeBuilder()
+        root_node = builder.build_tree(args.prompt, args.tree_depth)
+        
+        print(f"Built tree with {args.tree_depth} levels")
+        print(f"Root session ID: {root_node.session.id}")
+        
+        # Create session runner
+        runner = SessionRunner(
             model=args.model,
             max_tokens=args.max_tokens,
             temperature=args.temperature,
-            examples_xml=examples_xml
+            parent_readme_content=parent_readme_content,
+            leaf_readme_content=leaf_readme_content,
+            parent_examples_xml=parent_examples_xml,
+            leaf_examples_xml=leaf_examples_xml
         )
         
-        # Print the result
-        print(result)
+        print(f"Using model: {runner.model} in {runner.api_mode} mode")
+        
+        # Execute the tree
+        print("Executing tree...")
+        runner.execute_tree(root_node)
+        
+        # Get all sessions in pre-order
+        all_sessions = builder.get_all_sessions_preorder(root_node)
+        
+        # Save to XML file
+        filename = FileManager.save_session_xml(all_sessions, args.output_dir)
+        
+        print(f"Completed tree execution with {len(all_sessions)} sessions")
+        print(f"Results saved to: {os.path.join(args.output_dir, filename)}")
+        
+        # Print final result for quick viewing
+        if all_sessions:
+            final_session = all_sessions[-1]  # Last session in pre-order should be a leaf
+            if final_session.final_submit:
+                print("\nFinal result:")
+                print("-" * 40)
+                print(final_session.final_submit)
+                print("-" * 40)
         
     except Exception as e:
-        print(f"Error: {e}")
+        logging.error(f"Error during execution: {e}")
+        if args.verbose:
+            import traceback
+            traceback.print_exc()
         return 1
     
     return 0

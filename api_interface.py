@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+MAX_LOG_LENGTH = 5000
+
 class APIInterface(ABC):
     """Abstract interface for API implementations."""
     
@@ -32,7 +34,7 @@ class APIInterface(ABC):
         """
         pass
 
-def _shorten_for_logging(text: str, max_length: int = 500) -> str:
+def _shorten_for_logging(text: str, max_length: int = MAX_LOG_LENGTH) -> str:
     """Shorten text to show beginning and end, return as JSON string."""
     if len(text) <= max_length:
         return json.dumps(text)
@@ -83,13 +85,20 @@ class ClaudeCompletionsAPI(APIInterface):
             model=model,
             max_tokens_to_sample=max_tokens,
             temperature=temperature,
-            prompt=full_prompt
+            prompt=full_prompt,
+            stop_sequences=["</session>"]
         )
         
         response_text = response.completion
+        stop_reason = response.stop_reason
 
         shortened_response_text = _shorten_for_logging(response_text)
         logging.info(f"Claude Completions API response: {shortened_response_text}")
+        logging.info(f"Stop reason: {stop_reason}")
+        
+        # Check that we stopped at the expected sequence
+        if stop_reason != "stop_sequence":
+            raise RuntimeError(f"API call did not complete properly. Stop reason: {stop_reason}")
         
         return response_text
 
@@ -141,16 +150,23 @@ class ClaudeBaseModelAPI(APIInterface):
             max_tokens=max_tokens,
             temperature=temperature,
             system=system_prompt,
-            messages=messages
+            messages=messages,
+            stop_sequences=["</session>"]
         )
         
         if len(response.content) != 1:
             raise ValueError(f"Unexpected response format from Claude API: {response}")
         
         response_text = response.content[0].text
+        stop_reason = response.stop_reason
 
         shortened_response_text = _shorten_for_logging(response_text)
         logging.info(f"Claude Base Model API response: {shortened_response_text}")
+        logging.info(f"Stop reason: {stop_reason}")
+        
+        # Check that we stopped at the expected sequence
+        if stop_reason != "stop_sequence":
+            raise RuntimeError(f"API call did not complete properly. Stop reason: {stop_reason}")
         
         return response_text
 

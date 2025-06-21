@@ -14,6 +14,7 @@ LLMs were not involved in these experiments; however, the dynamics uncovered her
 
 Each transcript is structured as an XML-like document containing the prompts and submissions within one session:
 
+* `<sessions>` is the root node.
 * `<session>` wraps the entire exchange for one <prompt> and <submit> of a top-level writer.
 * `<prompt>` contains the initial writing instruction or challenge given to the top-level writer.
 * `<submit>` contains a finalized submission that the writer compiles, often integrating or building on delegated responses.
