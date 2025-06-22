@@ -19,7 +19,8 @@ class TestTreeRunnerConfig(unittest.TestCase):
             temperature=0.8,
             max_tokens=2000,
             leaf_readme_path="leaf.md",
-            parent_readme_path="parent.md"
+            parent_readme_path="parent.md",
+            prompt="Test prompt"
         )
         
         self.assertEqual(config.model, "test-model")
@@ -42,6 +43,7 @@ class TestTreeRunnerConfig(unittest.TestCase):
             max_tokens=1000,
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
+            prompt="Test prompt",
             leaf_examples_xml_path="leaf_examples.xml",
             parent_examples_xml_path="parent_examples.xml"
         )
@@ -62,7 +64,8 @@ class TestParseArgs(unittest.TestCase):
             '--temperature', '0.8',
             '--max-tokens', '2000',
             '--leaf-readme-path', 'prompts/leaf.md',
-            '--parent-readme-path', 'prompts/parent.md'
+            '--parent-readme-path', 'prompts/parent.md',
+            '--prompt', 'Test prompt'
         ]
         
         with patch('sys.argv', ['test'] + test_args):
@@ -86,6 +89,7 @@ class TestParseArgs(unittest.TestCase):
             '--max-tokens', '1000',
             '--leaf-readme-path', 'leaf.md',
             '--parent-readme-path', 'parent.md',
+            '--prompt', 'Test prompt',
             '--leaf-examples-xml-path', 'examples/leaf.xml',
             '--parent-examples-xml-path', 'examples/parent.xml'
         ]
@@ -104,7 +108,8 @@ class TestParseArgs(unittest.TestCase):
             '--temperature', '0.7',
             '--max-tokens', '1000',
             '--leaf-readme-path', 'leaf.md',
-            '--parent-readme-path', 'parent.md'
+            '--parent-readme-path', 'parent.md',
+            '--prompt', 'Test prompt'
             # Note: no output-dir specified, should use default
         ]
         
@@ -123,7 +128,8 @@ class TestParseArgs(unittest.TestCase):
             '--temperature', '0.7',
             '--max-tokens', '1000',
             '--leaf-readme-path', 'leaf.md',
-            '--parent-readme-path', 'parent.md'
+            '--parent-readme-path', 'parent.md',
+            '--prompt', 'Test prompt'
         ]
         
         with patch('sys.argv', ['test'] + test_args):
@@ -139,7 +145,8 @@ class TestParseArgs(unittest.TestCase):
             '--temperature', '2.0',  # Invalid: > 1.0
             '--max-tokens', '1000',
             '--leaf-readme-path', 'leaf.md',
-            '--parent-readme-path', 'parent.md'
+            '--parent-readme-path', 'parent.md',
+            '--prompt', 'Test prompt'
         ]
         
         with patch('sys.argv', ['test'] + test_args):
@@ -178,7 +185,8 @@ class TestCreateSessionGenerator(unittest.TestCase):
             temperature=0.7,
             max_tokens=1000,
             leaf_readme_path="leaf.md",
-            parent_readme_path="parent.md"
+            parent_readme_path="parent.md",
+            prompt="Test prompt"
         )
 
     def tearDown(self):
@@ -258,7 +266,8 @@ class TestCreateSessionGenerator(unittest.TestCase):
             temperature=0.7,
             max_tokens=1000,
             leaf_readme_path="nonexistent.md",
-            parent_readme_path="also_nonexistent.md"
+            parent_readme_path="also_nonexistent.md",
+            prompt="Test prompt"
         )
         
         # The function should handle non-existent files gracefully

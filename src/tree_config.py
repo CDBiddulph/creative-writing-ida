@@ -14,7 +14,8 @@ class TreeRunnerConfig:
     temperature: float                  # Generation temperature
     max_tokens: int                     # Maximum tokens per generation
     leaf_readme_path: str              # Path to leaf README file
-    parent_readme_path: str            # Path to parent README file  
+    parent_readme_path: str            # Path to parent README file
+    prompt: str                        # Initial prompt for tree generation
     leaf_examples_xml_path: str = None # Optional path to leaf examples
     parent_examples_xml_path: str = None # Optional path to parent examples
 
@@ -48,6 +49,8 @@ def parse_args() -> TreeRunnerConfig:
                        help='Optional path to leaf examples XML file')
     parser.add_argument('--parent-examples-xml-path',
                        help='Optional path to parent examples XML file')
+    parser.add_argument('--prompt', required=True,
+                       help='Initial prompt for tree generation')
     
     args = parser.parse_args()
     
@@ -67,6 +70,7 @@ def parse_args() -> TreeRunnerConfig:
         max_tokens=args.max_tokens,
         leaf_readme_path=args.leaf_readme_path,
         parent_readme_path=args.parent_readme_path,
+        prompt=args.prompt,
         leaf_examples_xml_path=args.leaf_examples_xml_path,
         parent_examples_xml_path=args.parent_examples_xml_path
     )

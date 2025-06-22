@@ -18,7 +18,7 @@ class SessionXmlGenerator(ABC):
         parent_examples_xml_path: Path to parent examples XML file
     """
 
-    STOP_SEQUENCE = "</submit>"
+    STOP_SEQUENCES = ["</ask>", "</submit>"]
 
     def __init__(
         self,

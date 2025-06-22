@@ -103,6 +103,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="submit>Generated story content")]
         mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</submit>"
         mock_client.messages.create.return_value = mock_response
 
         result = self.generator.generate_leaf("Write a story about robots")
@@ -157,6 +158,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="submit>Generated story without examples")]
         mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</submit>"
         mock_client.messages.create.return_value = mock_response
 
         result = generator.generate_leaf("Write a story about robots")
@@ -194,10 +196,11 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = [
             MagicMock(
-                text="notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>"
+                text="notes>Some notes</notes>\n<ask>What color?"
             )
         ]
         mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</ask>"
         mock_client.messages.create.return_value = mock_response
 
         result = self.generator.generate_parent("Create a story about adventure")
@@ -234,7 +237,7 @@ This is a test README file."""
         )
 
         # Verify result
-        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>\n</session>"
+        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n</session>"
         self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
@@ -247,6 +250,7 @@ This is a test README file."""
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="ask>What genre?</ask>")]
         mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</ask>"
         mock_client.messages.create.return_value = mock_response
 
         result = self.generator.generate_parent("Create a story")
@@ -381,6 +385,7 @@ This is a test README file."""
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="submit>CLI response")]
         mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</submit>"
         mock_client.messages.create.return_value = mock_response
 
         result = self.generator.generate_leaf("Write a story")
@@ -424,6 +429,7 @@ This is a test README file."""
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="ask>CLI ask</ask>")]
         mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</ask>"
         mock_client.messages.create.return_value = mock_response
 
         result = self.generator.generate_parent("Create a story")

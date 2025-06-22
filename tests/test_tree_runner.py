@@ -21,7 +21,8 @@ class TestTreeRunner(unittest.TestCase):
             temperature=0.7,
             max_tokens=1000,
             leaf_readme_path="test_leaf.md",
-            parent_readme_path="test_parent.md"
+            parent_readme_path="test_parent.md",
+            prompt="Test prompt"
         )
 
     def tearDown(self):

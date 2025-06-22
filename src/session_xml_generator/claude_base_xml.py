@@ -37,10 +37,12 @@ class ClaudeBaseSessionXmlGenerator(SessionXmlGenerator):
             prompt=full_prompt,
             model=self.model,
             max_tokens=self.max_tokens,
-            stop_sequences=[self.STOP_SEQUENCE],
+            stop_sequences=self.STOP_SEQUENCES,
             temperature=self.temperature,
         )
-        return f"{session_xml_start}{response}{self.STOP_SEQUENCE}\n</session>"
+        # The response doesn't include the stop sequence, so we need to add it
+        # Use the actual stop sequence returned by the API
+        return f"{session_xml_start}{response.text}{response.stop_sequence}\n</session>"
 
 
 if __name__ == "__main__":
