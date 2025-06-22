@@ -133,7 +133,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</submit>"],
+            stop_sequences=["</ask>", "</submit>"],
         )
 
         # Verify result
@@ -178,7 +178,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</submit>"],
+            stop_sequences=["</ask>", "</submit>"],
         )
 
         expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story without examples</submit>\n</session>"
@@ -230,11 +230,11 @@ This is a test README file."""
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</submit>"],
+            stop_sequences=["</ask>", "</submit>"],
         )
 
         # Verify result
-        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask></submit>\n</session>"
+        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>\n</session>"
         self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
@@ -279,7 +279,7 @@ This is a test README file."""
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</submit>"],
+            stop_sequences=["</ask>", "</submit>"],
         )
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
@@ -411,7 +411,7 @@ This is a test README file."""
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</submit>"],
+            stop_sequences=["</ask>", "</submit>"],
         )
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
@@ -456,7 +456,7 @@ This is a test README file."""
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</submit>"],
+            stop_sequences=["</ask>", "</submit>"],
         )
 
 
