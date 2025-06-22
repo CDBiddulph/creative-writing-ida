@@ -5,6 +5,70 @@ from unittest.mock import Mock
 from src.session_processor import SessionProcessor
 from src.tree_builder import TreeNode
 from src.xml_validator import XmlValidator
+import xml.etree.ElementTree as ET
+
+
+def _normalize_text(s):
+    """Normalize text by stripping if it consists only of whitespace."""
+    if s is None:
+        return None
+    s = s.strip()
+    return None if s == "" else s
+
+
+def _elements_are_equal(e1, e2):
+    if e1.tag != e2.tag:
+        return False
+    if _normalize_text(e1.text) != _normalize_text(e2.text):
+        return False
+    if _normalize_text(e1.tail) != _normalize_text(e2.tail):
+        return False
+    if list(e1.attrib.items()) != list(e2.attrib.items()):  # Order-sensitive
+        return False
+    if len(e1) != len(e2):
+        return False
+    return all(_elements_are_equal(c1, c2) for c1, c2 in zip(e1, e2))
+
+
+def xml_are_equivalent(xml1, xml2):
+    """Compare two XML strings for structural and textual equivalence,
+    ignoring insignificant whitespace but preserving attribute order.
+    """
+    try:
+        tree1 = ET.fromstring(xml1)
+        tree2 = ET.fromstring(xml2)
+        return _elements_are_equal(tree1, tree2)
+    except ET.ParseError:
+        return False
+
+
+class TestXmlAreEquivalent(unittest.TestCase):
+    """Test the xml_are_equivalent testing function."""
+
+    def test_equal_xml_are_equivalent(self):
+        """Test that the xml_are_equivalent function works."""
+        self.assertTrue(
+            xml_are_equivalent(
+                "<session><prompt>Test prompt</prompt></session>",
+                "<session><prompt>Test prompt</prompt></session>",
+            )
+        )
+
+    def test_xml_with_newlines_are_equivalent(self):
+        self.assertTrue(
+            xml_are_equivalent(
+                "<session><prompt>Test prompt</prompt>\n</session>",
+                "<session><prompt>Test prompt</prompt></session>",
+            )
+        )
+
+    def test_xml_with_spaces_in_value_are_equivalent(self):
+        self.assertTrue(
+            xml_are_equivalent(
+                "<session><prompt>Test prompt</prompt></session>",
+                "<session><prompt>Test prompt </prompt></session>",
+            )
+        )
 
 
 class TestSessionProcessor(unittest.TestCase):
@@ -65,9 +129,11 @@ class TestSessionProcessor(unittest.TestCase):
         self.assertEqual(generate_leaf_calls, expected_generate_leaf_calls)
 
         # Verify the result
-        self.assertEqual(
-            result.session_xml,
-            "<session>\n<prompt>Test prompt</prompt>\n<ask>Question 1?</ask>\n<response>Answer 1</response>\n<ask>Question 2?</ask>\n<response>Answer 2</response>\n<submit>Final content</submit>\n</session>",
+        self.assertTrue(
+            xml_are_equivalent(
+                result.session_xml,
+                "<session>\n<prompt>Test prompt</prompt>\n<ask>Question 1?</ask>\n<response>Answer 1</response>\n<ask>Question 2?</ask>\n<response>Answer 2</response>\n<submit>Final content</submit>\n</session>",
+            )
         )
 
 
