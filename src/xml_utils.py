@@ -30,19 +30,23 @@ def xml_are_equivalent(xml1, xml2):
     """
     Compare two XML strings for structural and textual equivalence,
     ignoring insignificant whitespace but preserving attribute order.
-    
+
     Args:
         xml1: First XML string to compare
         xml2: Second XML string to compare
-        
+
     Returns:
         bool: True if XML strings are structurally equivalent
     """
+    # This covers the case where the strings are not actually XML, like "FAILED"
+    if xml1 == xml2:
+        return True
+
     if xml1 is None and xml2 is None:
         return True
     if xml1 is None or xml2 is None:
         return False
-    
+
     try:
         tree1 = ET.fromstring(xml1)
         tree2 = ET.fromstring(xml2)
@@ -54,11 +58,11 @@ def xml_are_equivalent(xml1, xml2):
 def xml_lists_are_equivalent(xml_list1, xml_list2):
     """
     Compare two lists of XML strings for equivalence.
-    
+
     Args:
         xml_list1: First list of XML strings
         xml_list2: Second list of XML strings
-        
+
     Returns:
         bool: True if lists have same length and all corresponding XML strings are equivalent
     """

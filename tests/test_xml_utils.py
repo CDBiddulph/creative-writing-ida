@@ -16,6 +16,10 @@ class TestXmlUtils(unittest.TestCase):
             )
         )
 
+    def test_both_failed_are_equivalent(self):
+        """Test that when both are FAILED, they are equivalent."""
+        self.assertTrue(xml_are_equivalent("FAILED", "FAILED"))
+
     def test_xml_with_newlines_are_equivalent(self):
         """Test that XML with insignificant whitespace differences are equivalent."""
         self.assertTrue(
