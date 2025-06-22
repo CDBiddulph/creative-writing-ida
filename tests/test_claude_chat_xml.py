@@ -1,7 +1,7 @@
 """Tests for the ClaudeChatSessionXmlGenerator class."""
 
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock, call
 import tempfile
 import os
 from src.session_xml_generator.claude_chat_xml import ClaudeChatSessionXmlGenerator
@@ -470,6 +470,110 @@ These transcripts can be found in `transcripts.xml`."""
             system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</ask>", "</submit>"],
         )
+
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
+    def test_continue_parent_after_response(self, mock_anthropic):
+        """Test continuing parent generation after inserting a response."""
+        # Mock Anthropic API response
+        mock_client = MagicMock()
+        mock_anthropic.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.content = [
+            MagicMock(text="notes>Good response!</notes>\n<submit>Final story content")
+        ]
+        mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</submit>"
+        mock_client.messages.create.return_value = mock_response
+
+        # Current XML state with response inserted
+        current_xml = """<session>
+<prompt>Write a story</prompt>
+<notes>Need help</notes>
+<ask>What genre?</ask>
+<response>Science fiction</response>"""
+
+        result = self.generator.continue_parent(current_xml)
+
+        # Verify API was called with the current XML state
+        expected_readme_content = """# Test README
+This is a test README file.
+
+These transcripts can be found in `transcripts.xml`."""
+
+        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
+
+<sessions>
+<session>
+<prompt>Test prompt</prompt>
+<submit>Test response</submit>
+</session>
+</sessions>
+
+<session>
+<prompt>Write a story</prompt>
+<notes>Need help</notes>
+<ask>What genre?</ask>
+<response>Science fiction</response>"""
+
+        mock_client.messages.create.assert_called_once_with(
+            messages=[
+                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
+                {"role": "assistant", "content": expected_readme_content},
+                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
+                {"role": "assistant", "content": expected_transcript_content},
+            ],
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
+            stop_sequences=["</ask>", "</submit>"],
+        )
+
+        # Verify result contains the full session
+        expected_result = """<session>
+<prompt>Write a story</prompt>
+<notes>Need help</notes>
+<ask>What genre?</ask>
+<response>Science fiction</response>
+<notes>Good response!</notes>
+<submit>Final story content</submit>
+</session>"""
+        self.assertEqual(result, expected_result)
+
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
+    def test_continue_parent_multiple_asks(self, mock_anthropic):
+        """Test continuing parent generation that creates another ask."""
+        # Mock Anthropic API response
+        mock_client = MagicMock()
+        mock_anthropic.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.content = [
+            MagicMock(text="submit>Final content based on all responses")
+        ]
+        mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</submit>"
+        mock_client.messages.create.return_value = mock_response
+
+        # Current XML with multiple responses
+        current_xml = """<session>
+<prompt>Story task</prompt>
+<ask>Genre?</ask>
+<response>Mystery</response>
+<ask>Setting?</ask>
+<response>Victorian London</response>"""
+
+        result = self.generator.continue_parent(current_xml)
+
+        # Verify result completes the session
+        expected_result = """<session>
+<prompt>Story task</prompt>
+<ask>Genre?</ask>
+<response>Mystery</response>
+<ask>Setting?</ask>
+<response>Victorian London</response>
+<submit>Final content based on all responses</submit>
+</session>"""
+        self.assertEqual(result, expected_result)
 
 
 class TestGetSessionXmlGeneratorChatModel(unittest.TestCase):

@@ -190,9 +190,7 @@ This is a test README file.
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.completion = (
-            "notes>Some notes</notes>\n<ask>What color?"
-        )
+        mock_response.completion = "notes>Some notes</notes>\n<ask>What color?"
         mock_response.stop_reason = "stop_sequence"
         mock_response.stop_sequence = "</ask>"
         mock_client.completions.create.return_value = mock_response
@@ -301,6 +299,133 @@ This is a test README file.
 
         with self.assertRaises(FileNotFoundError):
             generator.generate_leaf("Write a story")
+
+    @patch("src.llms.claude_base.anthropic.Anthropic")
+    def test_continue_parent_after_response(self, mock_anthropic):
+        """Test continuing parent generation after inserting a response."""
+        # Mock Anthropic API response
+        mock_client = MagicMock()
+        mock_anthropic.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.completion = (
+            "notes>Good response!</notes>\n<submit>Final story content"
+        )
+        mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</submit>"
+        mock_client.completions.create.return_value = mock_response
+
+        # Current XML state with response inserted
+        current_xml = """<session>
+<prompt>Write a story</prompt>
+<notes>Need help</notes>
+<ask>What genre?</ask>
+<response>Science fiction</response>"""
+
+        result = self.generator.continue_parent(current_xml)
+
+        # Verify API was called with the current XML state in the prompt
+        expected_prompt = """# Test README
+This is a test README file.
+
+## Transcripts
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<sessions>
+<session>
+<prompt>Test prompt</prompt>
+<submit>Test response</submit>
+</session>
+</sessions>
+
+<session>
+<prompt>Write a story</prompt>
+<notes>Need help</notes>
+<ask>What genre?</ask>
+<response>Science fiction</response>"""
+
+        mock_client.completions.create.assert_called_once_with(
+            prompt=expected_prompt,
+            model=self.model,
+            max_tokens_to_sample=self.max_tokens,
+            temperature=self.temperature,
+            stop_sequences=["</ask>", "</submit>"],
+        )
+
+        # Verify result contains the full session
+        expected_result = """<session>
+<prompt>Write a story</prompt>
+<notes>Need help</notes>
+<ask>What genre?</ask>
+<response>Science fiction</response>
+<notes>Good response!</notes>
+<submit>Final story content</submit>
+</session>"""
+        self.assertEqual(result, expected_result)
+
+    @patch("src.llms.claude_base.anthropic.Anthropic")
+    def test_continue_parent_second_ask(self, mock_anthropic):
+        """Test continuing parent generation that creates another ask."""
+        # Mock Anthropic API response
+        mock_client = MagicMock()
+        mock_anthropic.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.completion = "notes>Need more info</notes>\n<ask>What setting?"
+        mock_response.stop_reason = "stop_sequence"
+        mock_response.stop_sequence = "</ask>"
+        mock_client.completions.create.return_value = mock_response
+
+        # Current XML state with one response
+        current_xml = """<session>
+<prompt>Complex story</prompt>
+<ask>What genre?</ask>
+<response>Fantasy</response>"""
+
+        result = self.generator.continue_parent(current_xml)
+
+        # Verify result returns the full XML including the new ask
+        expected_result = """<session>
+<prompt>Complex story</prompt>
+<ask>What genre?</ask>
+<response>Fantasy</response>
+<notes>Need more info</notes>
+<ask>What setting?</ask>"""
+        self.assertEqual(result, expected_result)
+
+    @patch("src.llms.claude_base.anthropic.Anthropic")
+    def test_continue_parent_complete_session(self, mock_anthropic):
+        """Test continuing parent that completes with submit and closes session."""
+        # Mock Anthropic API response
+        mock_client = MagicMock()
+        mock_anthropic.return_value = mock_client
+        mock_response = MagicMock()
+        mock_response.completion = (
+            "submit>Final content based on all responses</submit>\n</session>"
+        )
+        mock_response.stop_reason = "stop_sequence"
+        mock_response.stop = "</submit>"
+        mock_client.completions.create.return_value = mock_response
+
+        # Current XML with multiple responses
+        current_xml = """<session>
+<prompt>Story task</prompt>
+<ask>Genre?</ask>
+<response>Mystery</response>
+<ask>Setting?</ask>
+<response>Victorian London</response>"""
+
+        result = self.generator.continue_parent(current_xml)
+
+        # Verify result completes the session
+        expected_result = """<session>
+<prompt>Story task</prompt>
+<ask>Genre?</ask>
+<response>Mystery</response>
+<ask>Setting?</ask>
+<response>Victorian London</response>
+<submit>Final content based on all responses</submit>
+</session>"""
+        self.assertEqual(result, expected_result)
 
 
 class TestGetSessionXmlGenerator(unittest.TestCase):
