@@ -45,3 +45,16 @@ class SessionXmlGenerator(ABC):
     def generate_parent(self, prompt: str) -> str:
         """Generate a parent session."""
         pass
+
+    def _load_readme_content(self, readme_path: str) -> str:
+        """Load README content from file."""
+        with open(readme_path, "r") as f:
+            return f.read()
+
+    def _load_examples_xml(self, examples_path: str | None) -> str:
+        """Load examples XML from file or return empty string."""
+        if examples_path is None:
+            return ""
+
+        with open(examples_path, "r") as f:
+            return f.read()

@@ -79,10 +79,14 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
     def test_init_with_defaults(self):
         """Test initialization with default values."""
         generator = ClaudeBaseSessionXmlGenerator(
-            model=self.model, max_tokens=self.max_tokens, temperature=self.temperature
+            model=self.model, 
+            max_tokens=self.max_tokens, 
+            temperature=self.temperature,
+            leaf_readme_path=self.leaf_readme_path,
+            parent_readme_path=self.parent_readme_path
         )
-        self.assertIsNone(generator.leaf_readme_path)
-        self.assertIsNone(generator.parent_readme_path)
+        self.assertEqual(generator.leaf_readme_path, self.leaf_readme_path)
+        self.assertEqual(generator.parent_readme_path, self.parent_readme_path)
         self.assertIsNone(generator.leaf_examples_xml_path)
         self.assertIsNone(generator.parent_examples_xml_path)
 
@@ -138,6 +142,7 @@ This is a test README file.
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path=self.leaf_readme_path,
+            parent_readme_path=self.parent_readme_path,
         )
 
         # Mock Anthropic API response
@@ -255,6 +260,7 @@ This is a test README file.
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path="nonexistent_file.md",
+            parent_readme_path=self.parent_readme_path,
         )
 
         with self.assertRaises(FileNotFoundError):
@@ -268,6 +274,7 @@ This is a test README file.
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path=self.leaf_readme_path,
+            parent_readme_path=self.parent_readme_path,
             leaf_examples_xml_path="nonexistent_examples.xml",
         )
         
@@ -277,13 +284,15 @@ This is a test README file.
     def test_generate_leaf_no_readme_path(self):
         """Test leaf generation without README path raises FileNotFoundError."""
         generator = ClaudeBaseSessionXmlGenerator(
-            model=self.model, max_tokens=self.max_tokens, temperature=self.temperature
+            model=self.model, 
+            max_tokens=self.max_tokens, 
+            temperature=self.temperature,
+            leaf_readme_path="nonexistent_readme.md",
+            parent_readme_path=self.parent_readme_path
         )
 
-        with self.assertRaises(FileNotFoundError) as context:
+        with self.assertRaises(FileNotFoundError):
             generator.generate_leaf("Write a story")
-
-        self.assertIn("README path is required", str(context.exception))
 
 
 class TestGetSessionXmlGenerator(unittest.TestCase):

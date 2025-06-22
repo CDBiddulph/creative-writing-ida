@@ -82,10 +82,14 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
     def test_init_with_defaults(self):
         """Test initialization with default values."""
         generator = ClaudeChatSessionXmlGenerator(
-            model=self.model, max_tokens=self.max_tokens, temperature=self.temperature
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            leaf_readme_path=self.leaf_readme_path,
+            parent_readme_path=self.parent_readme_path,
         )
-        self.assertIsNone(generator.leaf_readme_path)
-        self.assertIsNone(generator.parent_readme_path)
+        self.assertEqual(generator.leaf_readme_path, self.leaf_readme_path)
+        self.assertEqual(generator.parent_readme_path, self.parent_readme_path)
         self.assertIsNone(generator.leaf_examples_xml_path)
         self.assertIsNone(generator.parent_examples_xml_path)
 
@@ -103,13 +107,9 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
 
         result = self.generator.generate_leaf("Write a story about robots")
 
-        # Verify API was called correctly
-        expected_content = """# Test README
-This is a test README file.
-
-## Transcripts
-
-<?xml version="1.0" encoding="UTF-8"?>
+        # Verify API was called correctly with CLI simulation format
+        expected_readme_content = "# Test README\nThis is a test README file."
+        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 
 <sessions>
 <session>
@@ -123,11 +123,16 @@ This is a test README file.
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
-            messages=[{"role": "user", "content": expected_content}],
+            messages=[
+                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
+                {"role": "assistant", "content": expected_readme_content},
+                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
+                {"role": "assistant", "content": expected_transcript_content},
+            ],
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            system="",
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</submit>"],
         )
 
@@ -142,6 +147,7 @@ This is a test README file.
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path=self.leaf_readme_path,
+            parent_readme_path=self.parent_readme_path,
         )
 
         # Mock Anthropic API response
@@ -155,21 +161,22 @@ This is a test README file.
         result = generator.generate_leaf("Write a story about robots")
 
         # Verify API call doesn't include examples
-        expected_content = """# Test README
-This is a test README file.
-
-## Transcripts
-
-<session>
-<prompt>Write a story about robots</prompt>
-<submit>"""
+        expected_readme_content = "# Test README\nThis is a test README file."
+        expected_transcript_content = (
+            "<session>\n<prompt>Write a story about robots</prompt>\n<submit>"
+        )
 
         mock_client.messages.create.assert_called_once_with(
-            messages=[{"role": "user", "content": expected_content}],
+            messages=[
+                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
+                {"role": "assistant", "content": expected_readme_content},
+                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
+                {"role": "assistant", "content": expected_transcript_content},
+            ],
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            system="",
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</submit>"],
         )
 
@@ -328,6 +335,7 @@ This is a test README file."""
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path="nonexistent_file.md",
+            parent_readme_path=self.parent_readme_path,
         )
 
         with self.assertRaises(FileNotFoundError):
@@ -341,6 +349,7 @@ This is a test README file."""
             max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path=self.leaf_readme_path,
+            parent_readme_path=self.parent_readme_path,
             leaf_examples_xml_path="nonexistent_examples.xml",
         )
 
@@ -350,13 +359,15 @@ This is a test README file."""
     def test_generate_leaf_no_readme_path(self):
         """Test leaf generation without README path raises FileNotFoundError."""
         generator = ClaudeChatSessionXmlGenerator(
-            model=self.model, max_tokens=self.max_tokens, temperature=self.temperature
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            leaf_readme_path="nonexistent_readme.md",
+            parent_readme_path=self.parent_readme_path,
         )
 
-        with self.assertRaises(FileNotFoundError) as context:
+        with self.assertRaises(FileNotFoundError):
             generator.generate_leaf("Write a story")
-
-        self.assertIn("README path is required", str(context.exception))
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_cli_simulation_messages(self, mock_anthropic):
@@ -373,12 +384,8 @@ This is a test README file."""
         result = self.generator.generate_leaf("Write a story")
 
         # Verify messages structure for CLI simulation
-        expected_content = """# Test README
-This is a test README file.
-
-## Transcripts
-
-<?xml version="1.0" encoding="UTF-8"?>
+        expected_readme_content = "# Test README\nThis is a test README file."
+        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 
 <sessions>
 <session>
@@ -392,11 +399,16 @@ This is a test README file.
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
-            messages=[{"role": "user", "content": expected_content}],
+            messages=[
+                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
+                {"role": "assistant", "content": expected_readme_content},
+                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
+                {"role": "assistant", "content": expected_transcript_content},
+            ],
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            system="",
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</submit>"],
         )
 
