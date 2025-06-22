@@ -1,6 +1,7 @@
 """Tree node representation for session tree structure."""
 
 from typing import List, Optional
+from .xml_utils import xml_are_equivalent
 
 
 class TreeNode:
@@ -77,7 +78,7 @@ class TreeNode:
             self.session_id == other.session_id
             and self.prompt == other.prompt
             and self.depth == other.depth
-            and self.session_xml == other.session_xml
+            and xml_are_equivalent(self.session_xml, other.session_xml)
             and self.children == other.children
         )
 
