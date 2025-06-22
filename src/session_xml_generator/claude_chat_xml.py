@@ -31,7 +31,7 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
         transcript_content = ""
         if examples_xml:
             transcript_content += examples_xml + "\n\n"
-        transcript_content += f"<session>\n<prompt>{prompt}</prompt>\n<submit>"
+        transcript_content += f"<session>\n<prompt>{prompt}</prompt>\n<"
 
         # Create messages
         messages = [

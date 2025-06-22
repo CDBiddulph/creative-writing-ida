@@ -30,21 +30,23 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
 
         # Create temporary files
         self.temp_dir = tempfile.mkdtemp()
-        
+
         self.leaf_readme_path = os.path.join(self.temp_dir, "leaf_readme.md")
-        with open(self.leaf_readme_path, 'w') as f:
+        with open(self.leaf_readme_path, "w") as f:
             f.write(self.sample_readme_content)
-            
+
         self.parent_readme_path = os.path.join(self.temp_dir, "parent_readme.md")
-        with open(self.parent_readme_path, 'w') as f:
+        with open(self.parent_readme_path, "w") as f:
             f.write(self.sample_readme_content)
-            
+
         self.leaf_examples_xml_path = os.path.join(self.temp_dir, "leaf_examples.xml")
-        with open(self.leaf_examples_xml_path, 'w') as f:
+        with open(self.leaf_examples_xml_path, "w") as f:
             f.write(self.sample_examples_xml)
-            
-        self.parent_examples_xml_path = os.path.join(self.temp_dir, "parent_examples.xml")
-        with open(self.parent_examples_xml_path, 'w') as f:
+
+        self.parent_examples_xml_path = os.path.join(
+            self.temp_dir, "parent_examples.xml"
+        )
+        with open(self.parent_examples_xml_path, "w") as f:
             f.write(self.sample_examples_xml)
 
         self.generator = ClaudeBaseSessionXmlGenerator(
@@ -60,6 +62,7 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
     def tearDown(self):
         """Clean up temporary files."""
         import shutil
+
         shutil.rmtree(self.temp_dir)
 
     def test_init(self):
@@ -79,11 +82,11 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
     def test_init_with_defaults(self):
         """Test initialization with default values."""
         generator = ClaudeBaseSessionXmlGenerator(
-            model=self.model, 
-            max_tokens=self.max_tokens, 
+            model=self.model,
+            max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path=self.leaf_readme_path,
-            parent_readme_path=self.parent_readme_path
+            parent_readme_path=self.parent_readme_path,
         )
         self.assertEqual(generator.leaf_readme_path, self.leaf_readme_path)
         self.assertEqual(generator.parent_readme_path, self.parent_readme_path)
@@ -121,7 +124,7 @@ This is a test README file.
 
 <session>
 <prompt>Write a story about robots</prompt>
-<submit>"""
+<"""
 
         mock_client.completions.create.assert_called_once_with(
             model=self.model,
@@ -163,7 +166,7 @@ This is a test README file.
 
 <session>
 <prompt>Write a story about robots</prompt>
-<submit>"""
+<"""
 
         mock_client.completions.create.assert_called_once_with(
             model=self.model,
@@ -208,7 +211,7 @@ This is a test README file.
 
 <session>
 <prompt>Create a story about adventure</prompt>
-<submit>"""
+<"""
 
         mock_client.completions.create.assert_called_once_with(
             model=self.model,
@@ -277,18 +280,18 @@ This is a test README file.
             parent_readme_path=self.parent_readme_path,
             leaf_examples_xml_path="nonexistent_examples.xml",
         )
-        
+
         with self.assertRaises(FileNotFoundError):
             generator.generate_leaf("Write a story")
 
     def test_generate_leaf_no_readme_path(self):
         """Test leaf generation without README path raises FileNotFoundError."""
         generator = ClaudeBaseSessionXmlGenerator(
-            model=self.model, 
-            max_tokens=self.max_tokens, 
+            model=self.model,
+            max_tokens=self.max_tokens,
             temperature=self.temperature,
             leaf_readme_path="nonexistent_readme.md",
-            parent_readme_path=self.parent_readme_path
+            parent_readme_path=self.parent_readme_path,
         )
 
         with self.assertRaises(FileNotFoundError):
@@ -319,9 +322,12 @@ class TestGetSessionXmlGenerator(unittest.TestCase):
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
         )
-        
+
         # Import here to avoid circular import
-        from src.session_xml_generator.claude_chat_xml import ClaudeChatSessionXmlGenerator
+        from src.session_xml_generator.claude_chat_xml import (
+            ClaudeChatSessionXmlGenerator,
+        )
+
         self.assertIsInstance(generator, ClaudeChatSessionXmlGenerator)
         self.assertEqual(generator.model, "claude-3-5-haiku-20241022")
         self.assertEqual(generator.max_tokens, 1000)

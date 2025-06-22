@@ -120,7 +120,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
 
 <session>
 <prompt>Write a story about robots</prompt>
-<submit>"""
+<"""
 
         mock_client.messages.create.assert_called_once_with(
             messages=[
@@ -163,7 +163,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         # Verify API call doesn't include examples
         expected_readme_content = "# Test README\nThis is a test README file."
         expected_transcript_content = (
-            "<session>\n<prompt>Write a story about robots</prompt>\n<submit>"
+            "<session>\n<prompt>Write a story about robots</prompt>\n<"
         )
 
         mock_client.messages.create.assert_called_once_with(
@@ -215,7 +215,7 @@ This is a test README file."""
 
 <session>
 <prompt>Create a story about adventure</prompt>
-<submit>"""
+<"""
 
         mock_client.messages.create.assert_called_once_with(
             messages=[
@@ -264,7 +264,7 @@ This is a test README file."""
 
 <session>
 <prompt>Create a story</prompt>
-<submit>"""
+<"""
 
         mock_client.messages.create.assert_called_once_with(
             messages=[
@@ -396,7 +396,7 @@ This is a test README file."""
 
 <session>
 <prompt>Write a story</prompt>
-<submit>"""
+<"""
 
         mock_client.messages.create.assert_called_once_with(
             messages=[
@@ -441,7 +441,7 @@ This is a test README file."""
 
 <session>
 <prompt>Create a story</prompt>
-<submit>"""
+<"""
 
         mock_client.messages.create.assert_called_once_with(
             messages=[

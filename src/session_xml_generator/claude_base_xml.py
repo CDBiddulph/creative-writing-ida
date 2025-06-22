@@ -29,7 +29,7 @@ class ClaudeBaseSessionXmlGenerator(SessionXmlGenerator):
         full_prompt = readme_content + "\n\n## Transcripts\n\n"
         if examples_xml:
             full_prompt += examples_xml + "\n\n"
-        full_prompt += f"<session>\n<prompt>{prompt}</prompt>\n<submit>"
+        full_prompt += f"<session>\n<prompt>{prompt}</prompt>\n<"
 
         # Call API
         return call_claude_base(
