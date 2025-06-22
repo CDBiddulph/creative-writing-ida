@@ -5,7 +5,6 @@ from unittest.mock import Mock
 from src.session_processor import SessionProcessor
 from src.tree_node import TreeNode
 from src.xml_validator import XmlValidator
-from src.xml_utils import xml_are_equivalent, xml_lists_are_equivalent
 
 
 class TestSessionProcessor(unittest.TestCase):
@@ -63,19 +62,9 @@ class TestSessionProcessor(unittest.TestCase):
         expected_generate_leaf_calls = ["Question 1?", "Question 2?"]
 
         # Verify the exact calls made to the XML generator
-        self.assertTrue(
-            xml_lists_are_equivalent(
-                generate_parent_calls, expected_generate_parent_calls
-            )
-        )
-        self.assertTrue(
-            xml_lists_are_equivalent(
-                continue_parent_calls, expected_continue_parent_calls
-            )
-        )
-        self.assertTrue(
-            xml_lists_are_equivalent(generate_leaf_calls, expected_generate_leaf_calls)
-        )
+        self.assertEqual(generate_parent_calls, expected_generate_parent_calls)
+        self.assertEqual(continue_parent_calls, expected_continue_parent_calls)
+        self.assertEqual(generate_leaf_calls, expected_generate_leaf_calls)
 
         # Create expected TreeNode structure
         expected_root = TreeNode(session_id=0, prompt="Test prompt", depth=0)
