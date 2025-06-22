@@ -109,7 +109,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         result = self.generator.generate_leaf("Write a story about robots")
 
         # Verify API was called correctly with CLI simulation format
-        expected_readme_content = "# Test README\nThis is a test README file."
+        expected_readme_content = "# Test README\nThis is a test README file.\n\nThese transcripts can be found in `transcripts.xml`."
         expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 
 <sessions>
@@ -156,7 +156,9 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="submit>Generated story without examples")]
+        mock_response.content = [
+            MagicMock(text="submit>Generated story without examples")
+        ]
         mock_response.stop_reason = "stop_sequence"
         mock_response.stop_sequence = "</submit>"
         mock_client.messages.create.return_value = mock_response
@@ -164,7 +166,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         result = generator.generate_leaf("Write a story about robots")
 
         # Verify API call doesn't include examples
-        expected_readme_content = "# Test README\nThis is a test README file."
+        expected_readme_content = "# Test README\nThis is a test README file.\n\nThese transcripts can be found in `transcripts.xml`."
         expected_transcript_content = (
             "<session>\n<prompt>Write a story about robots</prompt>\n<"
         )
@@ -195,9 +197,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
         mock_response.content = [
-            MagicMock(
-                text="notes>Some notes</notes>\n<ask>What color?"
-            )
+            MagicMock(text="notes>Some notes</notes>\n<ask>What color?")
         ]
         mock_response.stop_reason = "stop_sequence"
         mock_response.stop_sequence = "</ask>"
@@ -207,7 +207,9 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
 
         # Verify API was called correctly for parent
         expected_readme_content = """# Test README
-This is a test README file."""
+This is a test README file.
+
+These transcripts can be found in `transcripts.xml`."""
 
         expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 
@@ -237,7 +239,7 @@ This is a test README file."""
         )
 
         # Verify result
-        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n</session>"
+        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>"
         self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
@@ -257,7 +259,9 @@ This is a test README file."""
 
         # Verify system prompt and CLI simulation format
         expected_readme_content = """# Test README
-This is a test README file."""
+This is a test README file.
+
+These transcripts can be found in `transcripts.xml`."""
 
         expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 
@@ -391,7 +395,7 @@ This is a test README file."""
         result = self.generator.generate_leaf("Write a story")
 
         # Verify messages structure for CLI simulation
-        expected_readme_content = "# Test README\nThis is a test README file."
+        expected_readme_content = "# Test README\nThis is a test README file.\n\nThese transcripts can be found in `transcripts.xml`."
         expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 
 <sessions>
@@ -436,7 +440,9 @@ This is a test README file."""
 
         # Verify CLI simulation system prompt and message structure
         expected_readme_content = """# Test README
-This is a test README file."""
+This is a test README file.
+
+These transcripts can be found in `transcripts.xml`."""
 
         expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
 

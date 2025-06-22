@@ -27,6 +27,9 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
     def _generate_session(
         self, prompt: str, readme_content: str, examples_xml: str
     ) -> str:
+        # Add reference to transcripts.xml to the readme
+        readme_content += "\n\nThese transcripts can be found in `transcripts.xml`."
+
         # Build transcript content
         transcript_content = ""
         if examples_xml:
