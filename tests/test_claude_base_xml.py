@@ -5,7 +5,7 @@ from unittest.mock import patch, mock_open, MagicMock
 import tempfile
 import os
 from src.session_xml_generator.claude_base_xml import ClaudeBaseSessionXmlGenerator
-from src.session_xml_generator.session_xml_generator import get_session_xml_generator
+from src.session_xml_generator.factory import get_session_xml_generator
 
 
 class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
@@ -16,12 +16,8 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
         self.model = "as-hackathon-big-base-rollout"
         self.max_tokens = 1000
         self.temperature = 0.7
-        self.leaf_readme_path = "test_leaf_readme.md"
-        self.parent_readme_path = "test_parent_readme.md"
-        self.leaf_examples_xml_path = "test_leaf_examples.xml"
-        self.parent_examples_xml_path = "test_parent_examples.xml"
 
-        # Sample content for mocking
+        # Sample content
         self.sample_readme_content = "# Test README\nThis is a test README file."
         self.sample_examples_xml = """<?xml version="1.0" encoding="UTF-8"?>
 
@@ -32,6 +28,25 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
 </session>
 </sessions>"""
 
+        # Create temporary files
+        self.temp_dir = tempfile.mkdtemp()
+        
+        self.leaf_readme_path = os.path.join(self.temp_dir, "leaf_readme.md")
+        with open(self.leaf_readme_path, 'w') as f:
+            f.write(self.sample_readme_content)
+            
+        self.parent_readme_path = os.path.join(self.temp_dir, "parent_readme.md")
+        with open(self.parent_readme_path, 'w') as f:
+            f.write(self.sample_readme_content)
+            
+        self.leaf_examples_xml_path = os.path.join(self.temp_dir, "leaf_examples.xml")
+        with open(self.leaf_examples_xml_path, 'w') as f:
+            f.write(self.sample_examples_xml)
+            
+        self.parent_examples_xml_path = os.path.join(self.temp_dir, "parent_examples.xml")
+        with open(self.parent_examples_xml_path, 'w') as f:
+            f.write(self.sample_examples_xml)
+
         self.generator = ClaudeBaseSessionXmlGenerator(
             model=self.model,
             max_tokens=self.max_tokens,
@@ -41,6 +56,11 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
             leaf_examples_xml_path=self.leaf_examples_xml_path,
             parent_examples_xml_path=self.parent_examples_xml_path,
         )
+
+    def tearDown(self):
+        """Clean up temporary files."""
+        import shutil
+        shutil.rmtree(self.temp_dir)
 
     def test_init(self):
         """Test initialization of ClaudeBaseSessionXmlGenerator."""
@@ -67,11 +87,8 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
         self.assertIsNone(generator.parent_examples_xml_path)
 
     @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_generate_leaf_success(self, mock_file, mock_anthropic):
+    def test_generate_leaf_success(self, mock_anthropic):
         """Test successful leaf generation."""
-        # Mock file content
-        mock_file.return_value.read.return_value = self.sample_readme_content
 
         # Mock Anthropic API response
         mock_client = MagicMock()
@@ -114,8 +131,7 @@ This is a test README file.
         self.assertEqual(result, "Generated story content")
 
     @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_generate_leaf_without_examples(self, mock_file, mock_anthropic):
+    def test_generate_leaf_without_examples(self, mock_anthropic):
         """Test leaf generation without examples XML."""
         generator = ClaudeBaseSessionXmlGenerator(
             model=self.model,
@@ -123,9 +139,6 @@ This is a test README file.
             temperature=self.temperature,
             leaf_readme_path=self.leaf_readme_path,
         )
-
-        # Mock file content
-        mock_file.return_value.read.return_value = self.sample_readme_content
 
         # Mock Anthropic API response
         mock_client = MagicMock()
@@ -136,9 +149,6 @@ This is a test README file.
         mock_client.completions.create.return_value = mock_response
 
         result = generator.generate_leaf("Write a story about robots")
-
-        # Verify only readme was opened
-        self.assertEqual(mock_file.call_count, 1)
 
         # Verify API call doesn't include examples
         expected_prompt = """# Test README
@@ -161,11 +171,8 @@ This is a test README file.
         self.assertEqual(result, "Generated story without examples")
 
     @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_generate_parent_success(self, mock_file, mock_anthropic):
+    def test_generate_parent_success(self, mock_anthropic):
         """Test successful parent generation."""
-        # Mock file content
-        mock_file.return_value.read.return_value = self.sample_readme_content
 
         # Mock Anthropic API response
         mock_client = MagicMock()
@@ -224,11 +231,8 @@ This is a test README file.
         self.assertIn("API Error", str(context.exception))
 
     @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
-    @patch("builtins.open", new_callable=mock_open)
-    def test_generate_leaf_wrong_stop_reason(self, mock_file, mock_anthropic):
+    def test_generate_leaf_wrong_stop_reason(self, mock_anthropic):
         """Test handling of unexpected stop reason."""
-        # Mock file content
-        mock_file.return_value.read.return_value = self.sample_readme_content
 
         # Mock Anthropic API response with wrong stop reason
         mock_client = MagicMock()
@@ -258,51 +262,28 @@ This is a test README file.
 
     def test_generate_leaf_missing_examples_file(self):
         """Test error handling when examples file is missing."""
+        # Create generator with non-existent examples file
+        generator = ClaudeBaseSessionXmlGenerator(
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            leaf_readme_path=self.leaf_readme_path,
+            leaf_examples_xml_path="nonexistent_examples.xml",
+        )
+        
         with self.assertRaises(FileNotFoundError):
-            self.generator.generate_leaf("Write a story")
+            generator.generate_leaf("Write a story")
 
-    @patch("builtins.open", new_callable=mock_open)
-    def test_generate_leaf_no_readme_path(self, mock_file):
-        """Test leaf generation without README path uses default content."""
+    def test_generate_leaf_no_readme_path(self):
+        """Test leaf generation without README path raises FileNotFoundError."""
         generator = ClaudeBaseSessionXmlGenerator(
             model=self.model, max_tokens=self.max_tokens, temperature=self.temperature
         )
 
-        with patch(
-            "src.session_xml_generator.claude_base_xml.anthropic.Anthropic"
-        ) as mock_anthropic:
-            mock_client = MagicMock()
-            mock_anthropic.return_value = mock_client
-            mock_response = MagicMock()
-            mock_response.completion = "Default content story"
-            mock_response.stop_reason = "stop_sequence"
-            mock_client.completions.create.return_value = mock_response
+        with self.assertRaises(FileNotFoundError) as context:
+            generator.generate_leaf("Write a story")
 
-            result = generator.generate_leaf("Write a story")
-
-            # Verify no files were opened
-            mock_file.assert_not_called()
-
-            # Verify API call uses default content
-            expected_prompt = """# Fiction Leaf Experiments
-
-Transcripts of delegated microfiction experiments.
-
-## Transcripts
-
-<session>
-<prompt>Write a story</prompt>
-<submit>"""
-
-            mock_client.completions.create.assert_called_once_with(
-                model=self.model,
-                max_tokens_to_sample=self.max_tokens,
-                temperature=self.temperature,
-                prompt=expected_prompt,
-                stop_sequences=["</submit>"],
-            )
-
-            self.assertEqual(result, "Default content story")
+        self.assertIn("README path is required", str(context.exception))
 
 
 class TestGetSessionXmlGenerator(unittest.TestCase):
@@ -323,13 +304,18 @@ class TestGetSessionXmlGenerator(unittest.TestCase):
 
     def test_get_chat_model_generator(self):
         """Test getting chat model generator."""
-        with self.assertRaises(NameError):
-            generator = get_session_xml_generator(
-                model="claude-3-5-haiku-20241022",
-                max_tokens=1000,
-                leaf_readme_path="leaf.md",
-                parent_readme_path="parent.md",
-            )
+        generator = get_session_xml_generator(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=1000,
+            leaf_readme_path="leaf.md",
+            parent_readme_path="parent.md",
+        )
+        
+        # Import here to avoid circular import
+        from src.session_xml_generator.claude_chat_xml import ClaudeChatSessionXmlGenerator
+        self.assertIsInstance(generator, ClaudeChatSessionXmlGenerator)
+        self.assertEqual(generator.model, "claude-3-5-haiku-20241022")
+        self.assertEqual(generator.max_tokens, 1000)
 
     def test_get_generator_with_all_params(self):
         """Test factory function with all parameters."""
