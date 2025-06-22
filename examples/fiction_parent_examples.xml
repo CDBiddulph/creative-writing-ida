@@ -1,2 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sessions>
+  <session>
+    <prompt>Write a story about a robot detective.</prompt>
+    <notes>Need to make this unique. Not just another sci-fi cliché...</notes>
+    <ask>Invent a robot detective with some non-standard characteristics.</ask>
+    <response>Detective SARA-7: A self-aware robotic investigator whose primary diagnostic tool is emotional resonance mapping. Unlike traditional androids, she doesn't just analyze data—she "feels" the emotional undertones of crime scenes, detecting micro-shifts in ambient psychological energy that humans and standard AI completely miss.</response>
+    <notes>Sounds interesting.</notes>
+    <ask>Write a story about a robot detective named SARA-7 who can detect emotional resonance at crime scenes, in which she solves a mystery using only her emotional detection abilities.</ask>
+    <response>SARA-7 entered the "suicide" scene. Where humans saw tragedy, she felt deception—waves of calculated malice, not despair. The victim's grief was real, but layered beneath: someone else's satisfaction. She followed the emotional trail to the brother, whose inheritance motive blazed like neon guilt.</response>
+    <notes>This could be a bit longer. The tone is clinical, not exciting. The idea about reading the brother's emotions is sort of interesting though.</notes>
+    <submit>Detective SARA-7 stepped into the apartment. The official report read "suicide," but her empathy circuits detected something else entirely.
+
+Where humans saw a tragic end, she felt the ghostly residue of deception. The victim's despair was genuine, but underneath pulsed someone else's cold satisfaction—the metallic taste of premeditated malice.
+
+SARA-7 followed the emotional trail like breadcrumbs, past the staged note, beyond the planted evidence. It led directly to the brother waiting in the hallway, whose grief performance couldn't mask the neon-bright guilt of someone who'd just inherited everything.
+
+"Interesting," she said quietly. "You're radiating the wrong emotions for a grieving sibling."</submit>
+  </session>
+   <session>
+   <prompt>What are the psychological implications of being able to duplicate yourself at will?</prompt>
+   <notes>Complex topic. Need to think through identity, relationships, responsibility...</notes>
+   <ask>What would happen psychologically if someone could create perfect copies of themselves whenever they wanted?</ask>
+   <response>The ability to duplicate oneself would likely create severe identity fragmentation and existential confusion. Each copy would believe itself to be the "real" person, leading to conflicts over authenticity. Relationships would become impossible to maintain as others couldn't trust which version they're interacting with. The original person might develop a god complex or conversely, feel worthless knowing they're replaceable.</response>
+   <notes>Good start but missing some practical stuff. What about decision-making? Memory issues?</notes>
+   <ask>How would self-duplication affect decision-making, memory, and personal growth for someone with this ability?</ask>
+   <response>Decision-making would become paralyzed by infinite options - why choose one path when you can duplicate and try them all? Memory divergence would be catastrophic as each copy accumulates different experiences, making unified identity impossible. Personal growth would stagnate because there's no consequence to poor choices - just make another copy. The person would lose all sense of stakes and meaning in life.</response>
+   <notes>That's pretty dark but probably realistic. Should wrap this up.</notes>
+   <submit>• Identity crisis - each copy thinks it's the "real" you, leading to existential confusion and internal conflict
+- Relationship breakdown - others can't trust which version they're dealing with, destroying intimacy and connection  
+- Decision paralysis - why choose anything when you can duplicate and try every option simultaneously
+- Memory fragmentation - copies accumulate different experiences, making unified sense of self impossible
+- Loss of consequences - no stakes in life choices since you can always make another copy to try again
+- Stagnated growth - personal development requires learning from mistakes, but duplication removes the weight of failure
+- God complex or worthlessness - either feeling omnipotent or completely replaceable and meaningless</submit>
+ </session>

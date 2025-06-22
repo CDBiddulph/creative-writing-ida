@@ -6,7 +6,7 @@ Each node in the tree had limited context and time, and communication flowed onl
 
 Each top-level writer had a total of 10 minutes to work, not including time spent waiting for a response from their collaborators. To minimize downtime, we automatically assigned writers to a new or partially-completed task from a queue as soon as they requested help from collaborators; once the response was ready, we put the task back in the same top-level writer's queue.
 
-While writers with many levels of experience were involved in this experiment, all of the top-level writers in the transcripts below were drawn from our pool of professional authors.
+While writers with many levels of experience were involved in this experiment, all of the top-level writers in these transcripts were drawn from our pool of professional authors. The top-level writers in the transcripts may be asked either to write stories directly ("Write a story about...") or perform other tasks to help others further up the tree ("List many ideas about...", "What would be the implications of...").
 
 LLMs were not involved in these experiments; however, the dynamics uncovered here have implications for the future of human-AI collaboration. As language models become increasingly integrated into creative workflows, understanding how humans naturally decompose and delegate creative tasks can inform the design of more intuitive and aligned AI systems. By observing how ideas evolve through constrained, hierarchical communication, we can better anticipate both the strengths and bottlenecks in distributed storytelling — whether the collaborators are humans, machines, or a hybrid of both.
 
