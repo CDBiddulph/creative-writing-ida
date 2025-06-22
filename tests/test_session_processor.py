@@ -42,6 +42,13 @@ def xml_are_equivalent(xml1, xml2):
         return False
 
 
+def xml_lists_are_equivalent(xml_list1, xml_list2):
+    """Compare two lists of XML strings for equivalence."""
+    return len(xml_list1) == len(xml_list2) and all(
+        xml_are_equivalent(x, y) for x, y in zip(xml_list1, xml_list2)
+    )
+
+
 class TestXmlAreEquivalent(unittest.TestCase):
     """Test the xml_are_equivalent testing function."""
 
@@ -67,6 +74,42 @@ class TestXmlAreEquivalent(unittest.TestCase):
             xml_are_equivalent(
                 "<session><prompt>Test prompt</prompt></session>",
                 "<session><prompt>Test prompt </prompt></session>",
+            )
+        )
+
+    def test_xml_with_different_text_are_not_equivalent(self):
+        self.assertFalse(
+            xml_are_equivalent(
+                "<session><prompt>Test prompt</prompt></session>",
+                "<session><prompt>Test prompt 2</prompt></session>",
+            )
+        )
+
+    def test_xml_lists_are_equivalent(self):
+        self.assertTrue(
+            xml_lists_are_equivalent(
+                [
+                    "<session><prompt>Test prompt</prompt></session>",
+                    "<session><prompt>Test prompt</prompt><ask>Question 1?</ask></session>",
+                ],
+                [
+                    "<session><prompt>Test prompt</prompt></session>",
+                    "<session><prompt>Test prompt</prompt><ask>Question 1?</ask></session>",
+                ],
+            )
+        )
+
+    def test_xml_lists_are_not_equivalent(self):
+        self.assertFalse(
+            xml_lists_are_equivalent(
+                [
+                    "<session><prompt>Test prompt</prompt></session>",
+                    "<session><prompt>Test prompt</prompt><ask>Question 2?</ask></session>",
+                ],
+                [
+                    "<session><prompt>Test prompt 2</prompt></session>",
+                    "<session><prompt>Test prompt</prompt><ask>Question 1?</ask></session>",
+                ],
             )
         )
 
@@ -103,7 +146,7 @@ class TestSessionProcessor(unittest.TestCase):
             max_depth=1,
             max_retries=3,
         )
-        result = processor.process_session("Test prompt", depth=0, session_id=0)
+        result = processor.process_session("Test prompt")
 
         # Verify the exact calls made to generate_parent
         generate_parent_calls = [
@@ -124,9 +167,20 @@ class TestSessionProcessor(unittest.TestCase):
         ]
         expected_generate_leaf_calls = ["Question 1?", "Question 2?"]
 
-        self.assertEqual(generate_parent_calls, expected_generate_parent_calls)
-        self.assertEqual(continue_parent_calls, expected_continue_parent_calls)
-        self.assertEqual(generate_leaf_calls, expected_generate_leaf_calls)
+        # Verify the exact calls made to the XML generator
+        self.assertTrue(
+            xml_lists_are_equivalent(
+                generate_parent_calls, expected_generate_parent_calls
+            )
+        )
+        self.assertTrue(
+            xml_lists_are_equivalent(
+                continue_parent_calls, expected_continue_parent_calls
+            )
+        )
+        self.assertTrue(
+            xml_lists_are_equivalent(generate_leaf_calls, expected_generate_leaf_calls)
+        )
 
         # Verify the result
         self.assertTrue(
