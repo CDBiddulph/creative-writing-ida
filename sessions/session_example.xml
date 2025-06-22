@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sessions>
+
   <session>
+    <id>0</id>
     <prompt>Write a story using the following prompt: A human and elf enter a romantic relationship, but the elf's long lifespan makes things weird.</prompt>
     <notes>"Weird" implies something humorous. I think I want to make this story funny somehow. Why might it be weird?</notes>
     <ask>What might be humorously "weird" things that come up in a relationship between a human and an elf due to the elf's long lifespan?</ask>
@@ -8,10 +10,12 @@
     <response>Maybe the elf dated people who the human is related to. Maybe the elf finds the human very immature.</response>
     <notes>Let's do the first idea.</notes>
     <ask>Write a humorous story about a human and an elf who are dating, but the elf lived for a long time and dated the human's great-grandfather.</ask>
+    <response-id>3</response-id>
     <response>"I can't believe you dated my great-grandfather," shouted Tarcus. ...</response>
-    <notes>This is a little cheesy. I'll make some finishing touches to this story.</notes>
+    <notes>This is a little cheesy. I'll rewrite it, reusing some of the same ideas.</notes>
     <submit>Alfric shook his head in disbelief. ...</submit>
   </session>
+
   <session>
     <id>1</id>
     <prompt>What might be humorously "weird" things that come up in a relationship between a human and an elf due to the elf's long lifespan?</prompt>
@@ -21,11 +25,19 @@
     <response>...</response>
     <submit>...</submit>
   </session>
+
   <session>
     <id>2</id>
     <prompt>...</prompt>
     <notes>...</notes>
     <submit>...</submit>
   </session>
-</sessions>
 
+  <session>
+    <id>3</id>
+    <prompt>Write a humorous story about a human and an elf who are dating, but the elf lived for a long time and dated the human's great-grandfather.</prompt>
+    <notes>...</notes>
+    <submit>...</submit>
+  </session>
+
+</sessions>
