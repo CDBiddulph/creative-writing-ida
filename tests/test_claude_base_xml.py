@@ -86,7 +86,7 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
         self.assertIsNone(generator.leaf_examples_xml_path)
         self.assertIsNone(generator.parent_examples_xml_path)
 
-    @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_leaf_success(self, mock_anthropic):
         """Test successful leaf generation."""
 
@@ -130,7 +130,7 @@ This is a test README file.
         # Verify result
         self.assertEqual(result, "Generated story content")
 
-    @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_leaf_without_examples(self, mock_anthropic):
         """Test leaf generation without examples XML."""
         generator = ClaudeBaseSessionXmlGenerator(
@@ -170,7 +170,7 @@ This is a test README file.
 
         self.assertEqual(result, "Generated story without examples")
 
-    @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_parent_success(self, mock_anthropic):
         """Test successful parent generation."""
 
@@ -217,7 +217,7 @@ This is a test README file.
         self.assertIn("<notes>Some notes</notes>", result)
         self.assertIn("<ask>What color?</ask>", result)
 
-    @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_leaf_api_error(self, mock_anthropic):
         """Test API error handling in leaf generation."""
         # Mock Anthropic API to raise an exception
@@ -230,7 +230,7 @@ This is a test README file.
 
         self.assertIn("API Error", str(context.exception))
 
-    @patch("src.session_xml_generator.claude_base_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_leaf_wrong_stop_reason(self, mock_anthropic):
         """Test handling of unexpected stop reason."""
 

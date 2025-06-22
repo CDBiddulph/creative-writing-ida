@@ -89,7 +89,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         self.assertIsNone(generator.leaf_examples_xml_path)
         self.assertIsNone(generator.parent_examples_xml_path)
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_success(self, mock_anthropic):
         """Test successful leaf generation."""
 
@@ -123,17 +123,18 @@ This is a test README file.
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
+            messages=[{"role": "user", "content": expected_content}],
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            messages=[{"role": "user", "content": expected_content}],
+            system="",
             stop_sequences=["</submit>"],
         )
 
         # Verify result
         self.assertEqual(result, "Generated story content")
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_without_examples(self, mock_anthropic):
         """Test leaf generation without examples XML."""
         generator = ClaudeChatSessionXmlGenerator(
@@ -164,16 +165,17 @@ This is a test README file.
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
+            messages=[{"role": "user", "content": expected_content}],
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            messages=[{"role": "user", "content": expected_content}],
+            system="",
             stop_sequences=["</submit>"],
         )
 
         self.assertEqual(result, "Generated story without examples")
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_parent_success(self, mock_anthropic):
         """Test successful parent generation."""
 
@@ -209,16 +211,16 @@ This is a test README file."""
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             messages=[
                 {"role": "user", "content": "<cmd>cat README.md</cmd>"},
                 {"role": "assistant", "content": expected_readme_content},
                 {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
                 {"role": "assistant", "content": expected_transcript_content},
             ],
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</submit>"],
         )
 
@@ -226,7 +228,7 @@ This is a test README file."""
         self.assertIn("<notes>Some notes</notes>", result)
         self.assertIn("<ask>What color?</ask>", result)
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_parent_with_system_prompt(self, mock_anthropic):
         """Test parent generation includes system prompt."""
 
@@ -258,20 +260,20 @@ This is a test README file."""
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             messages=[
                 {"role": "user", "content": "<cmd>cat README.md</cmd>"},
                 {"role": "assistant", "content": expected_readme_content},
                 {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
                 {"role": "assistant", "content": expected_transcript_content},
             ],
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</submit>"],
         )
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_api_error(self, mock_anthropic):
         """Test API error handling in leaf generation."""
         # Mock Anthropic API to raise an exception
@@ -284,7 +286,7 @@ This is a test README file."""
 
         self.assertIn("API Error", str(context.exception))
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_wrong_stop_reason(self, mock_anthropic):
         """Test handling of unexpected stop reason."""
 
@@ -302,7 +304,7 @@ This is a test README file."""
         self.assertIn("API call did not complete properly", str(context.exception))
         self.assertIn("max_tokens", str(context.exception))
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_unexpected_response_format(self, mock_anthropic):
         """Test handling of unexpected response format."""
 
@@ -356,7 +358,7 @@ This is a test README file."""
 
         self.assertIn("README path is required", str(context.exception))
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_cli_simulation_messages(self, mock_anthropic):
         """Test that leaf generation uses proper CLI simulation message format."""
 
@@ -390,14 +392,15 @@ This is a test README file.
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
+            messages=[{"role": "user", "content": expected_content}],
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
-            messages=[{"role": "user", "content": expected_content}],
+            system="",
             stop_sequences=["</submit>"],
         )
 
-    @patch("src.session_xml_generator.claude_chat_xml.anthropic.Anthropic")
+    @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_parent_cli_simulation_messages(self, mock_anthropic):
         """Test that parent generation uses proper CLI simulation message format."""
 
@@ -429,16 +432,16 @@ This is a test README file."""
 <submit>"""
 
         mock_client.messages.create.assert_called_once_with(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             messages=[
                 {"role": "user", "content": "<cmd>cat README.md</cmd>"},
                 {"role": "assistant", "content": expected_readme_content},
                 {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
                 {"role": "assistant", "content": expected_transcript_content},
             ],
+            model=self.model,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
             stop_sequences=["</submit>"],
         )
 

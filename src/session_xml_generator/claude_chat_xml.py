@@ -1,5 +1,6 @@
-import anthropic
-from src.session_xml_generator.session_xml_generator import SessionXmlGenerator
+import logging
+from ..llms.claude_chat import call_claude_chat
+from .session_xml_generator import SessionXmlGenerator
 
 CLI_SIMULATION_SYSTEM_PROMPT = "The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command."
 
@@ -13,35 +14,29 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
         readme_content = self._load_readme_content(self.leaf_readme_path)
         examples_xml = self._load_examples_xml(self.leaf_examples_xml_path)
 
-        # Build content
-        full_content = readme_content + "\n\n## Transcripts\n\n"
+        # Build transcript content
+        transcript_content = ""
         if examples_xml:
-            full_content += examples_xml + "\n\n"
-        full_content += f"<session>\n<prompt>{prompt}</prompt>\n<submit>"
+            transcript_content += examples_xml + "\n\n"
+        transcript_content += f"<session>\n<prompt>{prompt}</prompt>\n<submit>"
 
         # Create messages
-        messages = [{"role": "user", "content": full_content}]
+        messages = [
+            {"role": "user", "content": "<cmd>cat README.md</cmd>"},
+            {"role": "assistant", "content": readme_content},
+            {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
+            {"role": "assistant", "content": transcript_content},
+        ]
 
         # Call API
-        client = anthropic.Anthropic()
-        response = client.messages.create(
+        return call_claude_chat(
+            system_prompt="",
+            messages=messages,
             model=self.model,
             max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            messages=messages,
             stop_sequences=["</submit>"],
+            temperature=self.temperature,
         )
-
-        # Validate response
-        if response.stop_reason != "stop_sequence":
-            raise RuntimeError(
-                f"API call did not complete properly. Stop reason: {response.stop_reason}"
-            )
-
-        if len(response.content) != 1:
-            raise ValueError(f"Unexpected response format from Claude API: {response}")
-
-        return response.content[0].text
 
     def generate_parent(self, prompt: str) -> str:
         """Generate a parent session using Claude chat model messages API with CLI simulation."""
@@ -64,39 +59,36 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
         ]
 
         # Call API
-        client = anthropic.Anthropic()
-        response = client.messages.create(
+        return call_claude_chat(
+            system_prompt=CLI_SIMULATION_SYSTEM_PROMPT,
+            messages=messages,
             model=self.model,
             max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system=CLI_SIMULATION_SYSTEM_PROMPT,
-            messages=messages,
             stop_sequences=["</submit>"],
+            temperature=self.temperature,
         )
-
-        # Validate response
-        if response.stop_reason != "stop_sequence":
-            raise RuntimeError(
-                f"API call did not complete properly. Stop reason: {response.stop_reason}"
-            )
-
-        if len(response.content) != 1:
-            raise ValueError(f"Unexpected response format from Claude API: {response}")
-
-        return response.content[0].text
 
     def _load_readme_content(self, readme_path: str) -> str:
         """Load README content from file."""
-        if readme_path is None:
-            raise FileNotFoundError("README path is required but was not provided")
-        
-        with open(readme_path, 'r') as f:
+        with open(readme_path, "r") as f:
             return f.read()
-    
-    def _load_examples_xml(self, examples_path: str) -> str:
+
+    def _load_examples_xml(self, examples_path: str | None) -> str:
         """Load examples XML from file or return empty string."""
         if examples_path is None:
             return ""
-        
-        with open(examples_path, 'r') as f:
+
+        with open(examples_path, "r") as f:
             return f.read()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    generator = ClaudeChatSessionXmlGenerator(
+        model="claude-3-5-haiku-20241022",
+        max_tokens=1000,
+        temperature=0.7,
+        leaf_readme_path="prompts/fiction_leaf_readme.md",
+        leaf_examples_xml_path="examples/fiction_leaf_examples.xml",
+    )
+    print(generator.generate_leaf("Write a story about a cat"))

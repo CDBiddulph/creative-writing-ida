@@ -1,7 +1,7 @@
 import logging
 import anthropic
 from dotenv import load_dotenv
-from logging_utils import shorten_for_logging
+from src.logging_utils import shorten_for_logging
 
 
 load_dotenv()
@@ -15,8 +15,8 @@ def call_claude_chat(
     stop_sequences: list[str],
     temperature: float = 0.7,
 ) -> str:
-    """Call the Claude API in base model mode using CLI simulation."""
-    logging.info(f"Sending request to Claude Base Model API...")
+    """Call the Claude API with a chat model simulating a base model using CLI simulation."""
+    logging.info(f"Sending request to Claude Chat Model API...")
     logging.info(f"  Messages:")
     for message in messages:
         logging.info(
@@ -44,7 +44,7 @@ def call_claude_chat(
     stop_reason = response.stop_reason
 
     logging.info(
-        f"Claude Base Model API response: {shorten_for_logging(response_text)}"
+        f"Claude Chat Model API response: {shorten_for_logging(response_text)}"
     )
 
     # Check that we stopped at the expected sequence

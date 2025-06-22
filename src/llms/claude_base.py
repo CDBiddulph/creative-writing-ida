@@ -1,7 +1,7 @@
 import logging
 import anthropic
 from dotenv import load_dotenv
-from logging_utils import shorten_for_logging
+from src.logging_utils import shorten_for_logging
 
 
 load_dotenv()
