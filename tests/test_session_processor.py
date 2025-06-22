@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 from src.session_processor import SessionProcessor
-from src.tree_builder import TreeNode
+from src.tree_node import TreeNode
 from src.xml_validator import XmlValidator
 import xml.etree.ElementTree as ET
 
@@ -182,13 +182,22 @@ class TestSessionProcessor(unittest.TestCase):
             xml_lists_are_equivalent(generate_leaf_calls, expected_generate_leaf_calls)
         )
 
-        # Verify the result
-        self.assertTrue(
-            xml_are_equivalent(
-                result.session_xml,
-                "<session>\n<prompt>Test prompt</prompt>\n<ask>Question 1?</ask>\n<response>Answer 1</response>\n<ask>Question 2?</ask>\n<response>Answer 2</response>\n<submit>Final content</submit>\n</session>",
-            )
-        )
+        # Create expected TreeNode structure
+        expected_root = TreeNode(session_id=0, prompt="Test prompt", depth=0)
+        expected_root.session_xml = "<session>\n<prompt>Test prompt</prompt>\n<ask>Question 1?</ask>\n<response>Answer 1</response>\n<ask>Question 2?</ask>\n<response>Answer 2</response>\n<submit>Final content</submit>\n</session>"
+        
+        # Create expected child nodes
+        child1 = TreeNode(session_id=1, prompt="Question 1?", depth=1)
+        child1.session_xml = "<session><prompt>Question 1?</prompt><submit>Answer 1</submit></session>"
+        
+        child2 = TreeNode(session_id=2, prompt="Question 2?", depth=1)
+        child2.session_xml = "<session><prompt>Question 2?</prompt><submit>Answer 2</submit></session>"
+        
+        expected_root.add_child(child1)
+        expected_root.add_child(child2)
+        
+        # Verify the complete TreeNode structure
+        self.assertEqual(result, expected_root)
 
 
 if __name__ == "__main__":

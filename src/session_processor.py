@@ -1,7 +1,7 @@
 """Handles incremental processing of sessions with recursive tree building."""
 
 import re
-from .tree_builder import TreeNode
+from .tree_node import TreeNode
 
 
 class SessionProcessor:
