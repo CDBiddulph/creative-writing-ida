@@ -1,6 +1,6 @@
 """Factory function for creating session XML generators."""
 
-from src.config import resolve_model_type
+from src.config import resolve_model_name, resolve_model_type
 from src.session_xml_generator.claude_base_xml import ClaudeBaseSessionXmlGenerator
 from src.session_xml_generator.claude_chat_xml import ClaudeChatSessionXmlGenerator
 from src.session_xml_generator.session_xml_generator import SessionXmlGenerator
@@ -30,6 +30,7 @@ def get_session_xml_generator(
     Returns:
         Appropriate API interface instance
     """
+    model = resolve_model_name(model)
     model_type = resolve_model_type(model)
     if model_type == "base":
         return ClaudeBaseSessionXmlGenerator(
