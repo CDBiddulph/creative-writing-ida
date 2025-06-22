@@ -15,7 +15,11 @@ class TreeNode:
             prompt: The prompt text for this session
             depth: Depth level in tree (root = 0)
         """
-        pass
+        self.session_id = session_id
+        self.prompt = prompt
+        self.depth = depth
+        self.children: List['TreeNode'] = []
+        self.session_xml: Optional[str] = None
     
     def add_child(self, child_node: 'TreeNode'):
         """
@@ -26,7 +30,7 @@ class TreeNode:
             
         Maintains parent-child relationships for tree traversal.
         """
-        pass
+        self.children.append(child_node)
     
     def count_nodes(self) -> int:
         """
@@ -37,7 +41,10 @@ class TreeNode:
             
         Used for calculating session IDs of subsequent children and tree statistics.
         """
-        pass
+        count = 1  # Count self
+        for child in self.children:
+            count += child.count_nodes()
+        return count
     
     def traverse_preorder(self) -> List['TreeNode']:
         """
@@ -48,4 +55,7 @@ class TreeNode:
             
         Used for generating the final XML output where sessions appear in execution order.
         """
-        pass
+        result = [self]
+        for child in self.children:
+            result.extend(child.traverse_preorder())
+        return result

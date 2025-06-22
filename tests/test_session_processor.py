@@ -61,7 +61,7 @@ class TestSessionProcessor(unittest.TestCase):
         """Test processing a parent node that creates child sessions via asks."""
         # Mock generator behavior for parent with asks
         def mock_generate_parent(prompt):
-            if "Write a story" in prompt:
+            if isinstance(prompt, str) and not prompt.startswith("<session>"):
                 # First call: return partial XML stopping at </ask>
                 return "<session><prompt>Write a story</prompt><notes>Need ideas</notes><ask>What genre should it be?</ask>"
             else:
@@ -93,14 +93,14 @@ class TestSessionProcessor(unittest.TestCase):
         ask_count = 0
         
         def mock_generate_parent(prompt):
-            nonlocal ask_count
-            if ask_count == 0:
-                ask_count += 1
+            if isinstance(prompt, str) and not prompt.startswith("<session>"):
+                # First call: return partial XML stopping at first ask
                 return "<session><prompt>Complex story</prompt><ask>What's the setting?</ask>"
-            elif ask_count == 1:
-                ask_count += 1
+            elif "<response>Space station</response>" in prompt and "<ask>Who's the protagonist?</ask>" not in prompt:
+                # Second continuation after first response: return second ask
                 return "<ask>Who's the protagonist?</ask>"
             else:
+                # Final continuation: complete the session
                 return "<submit>Story with setting and protagonist</submit></session>"
         
         def mock_generate_leaf(prompt):
