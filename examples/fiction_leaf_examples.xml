@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sessions>
+
 <session>
 <prompt>
-Write a story using the following prompt: Write a dystopian story where a well-intentioned medical policy slowly erodes personal bodily autonomy.
+Write a story using the following prompt: A well-intentioned medical policy slowly erodes personal bodily autonomy.
 </prompt>
 <submit>
 The organ donation system moved from opt-in to opt-out, from affirmative consent to presumed consent.
@@ -22,6 +23,23 @@ There was a tattoo you could get, by way or warning, just in case you were worri
 But in the end, they were the minority. People accepted it, by and large. You'd get a bombing at an organ harvesting office every few months, and regular protests, but it didn't change much. Society had made its decision, it seemed.
 </submit>
 </session>
+
+<session>
+<prompt>
+A wizard in my story only knows one spell. Come up with a list of humorous ideas for spells. This will be the centerpiece of the story.
+</prompt>
+<submit>
+The spell could be:
+- summoning ducks
+- making things slightly colder
+- making everyone in a 10-foot radius hear elevator music
+- turning things into cheese, very slowly
+- an evil wizard who makes people sneeze once, and lies that it's the onset of a terrible disease
+- creating a single spark, which he overuses in attempts to seem dramatic
+- teleporting five inches to the left
+</submit>
+</session>
+
 <session>
 <prompt>
 Write a story using the following prompt: Laughter really is the best medicine.
