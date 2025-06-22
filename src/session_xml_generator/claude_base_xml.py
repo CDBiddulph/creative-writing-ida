@@ -29,16 +29,18 @@ class ClaudeBaseSessionXmlGenerator(SessionXmlGenerator):
         full_prompt = readme_content + "\n\n## Transcripts\n\n"
         if examples_xml:
             full_prompt += examples_xml + "\n\n"
-        full_prompt += f"<session>\n<prompt>{prompt}</prompt>\n<"
+        session_xml_start = f"<session>\n<prompt>{prompt}</prompt>\n<"
+        full_prompt += session_xml_start
 
         # Call API
-        return call_claude_base(
+        response = call_claude_base(
             prompt=full_prompt,
             model=self.model,
             max_tokens=self.max_tokens,
-            stop_sequences=["</submit>"],
+            stop_sequences=[self.STOP_SEQUENCE],
             temperature=self.temperature,
         )
+        return f"{session_xml_start}{response}{self.STOP_SEQUENCE}\n</session>"
 
 
 if __name__ == "__main__":

@@ -101,7 +101,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="Generated story content")]
+        mock_response.content = [MagicMock(text="submit>Generated story content")]
         mock_response.stop_reason = "stop_sequence"
         mock_client.messages.create.return_value = mock_response
 
@@ -137,7 +137,8 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         )
 
         # Verify result
-        self.assertEqual(result, "Generated story content")
+        expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story content</submit>\n</session>"
+        self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_without_examples(self, mock_anthropic):
@@ -154,7 +155,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="Generated story without examples")]
+        mock_response.content = [MagicMock(text="submit>Generated story without examples")]
         mock_response.stop_reason = "stop_sequence"
         mock_client.messages.create.return_value = mock_response
 
@@ -180,7 +181,8 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
             stop_sequences=["</submit>"],
         )
 
-        self.assertEqual(result, "Generated story without examples")
+        expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story without examples</submit>\n</session>"
+        self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_parent_success(self, mock_anthropic):
@@ -192,7 +194,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_response = MagicMock()
         mock_response.content = [
             MagicMock(
-                text="<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>"
+                text="notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>"
             )
         ]
         mock_response.stop_reason = "stop_sequence"
@@ -232,8 +234,8 @@ This is a test README file."""
         )
 
         # Verify result
-        self.assertIn("<notes>Some notes</notes>", result)
-        self.assertIn("<ask>What color?</ask>", result)
+        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask></submit>\n</session>"
+        self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_parent_with_system_prompt(self, mock_anthropic):
@@ -243,7 +245,7 @@ This is a test README file."""
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="<ask>What genre?</ask>")]
+        mock_response.content = [MagicMock(text="ask>What genre?</ask>")]
         mock_response.stop_reason = "stop_sequence"
         mock_client.messages.create.return_value = mock_response
 
@@ -301,7 +303,7 @@ This is a test README file."""
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="Incomplete response")]
+        mock_response.content = [MagicMock(text="submit>Incomplete response")]
         mock_response.stop_reason = "max_tokens"
         mock_client.messages.create.return_value = mock_response
 
@@ -377,7 +379,7 @@ This is a test README file."""
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="CLI response")]
+        mock_response.content = [MagicMock(text="submit>CLI response")]
         mock_response.stop_reason = "stop_sequence"
         mock_client.messages.create.return_value = mock_response
 
@@ -420,7 +422,7 @@ This is a test README file."""
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="<ask>CLI ask</ask>")]
+        mock_response.content = [MagicMock(text="ask>CLI ask</ask>")]
         mock_response.stop_reason = "stop_sequence"
         mock_client.messages.create.return_value = mock_response
 

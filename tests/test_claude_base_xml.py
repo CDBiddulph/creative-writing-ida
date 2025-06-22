@@ -101,7 +101,7 @@ class TestClaudeBaseSessionXmlGenerator(unittest.TestCase):
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.completion = "Generated story content"
+        mock_response.completion = "submit>Generated story content"
         mock_response.stop_reason = "stop_sequence"
         mock_client.completions.create.return_value = mock_response
 
@@ -135,7 +135,8 @@ This is a test README file.
         )
 
         # Verify result
-        self.assertEqual(result, "Generated story content")
+        expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story content</submit>\n</session>"
+        self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_leaf_without_examples(self, mock_anthropic):
@@ -152,7 +153,7 @@ This is a test README file.
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.completion = "Generated story without examples"
+        mock_response.completion = "submit>Generated story without examples"
         mock_response.stop_reason = "stop_sequence"
         mock_client.completions.create.return_value = mock_response
 
@@ -176,7 +177,8 @@ This is a test README file.
             stop_sequences=["</submit>"],
         )
 
-        self.assertEqual(result, "Generated story without examples")
+        expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story without examples</submit>\n</session>"
+        self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_parent_success(self, mock_anthropic):
@@ -187,7 +189,7 @@ This is a test README file.
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
         mock_response.completion = (
-            "<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>"
+            "notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask>"
         )
         mock_response.stop_reason = "stop_sequence"
         mock_client.completions.create.return_value = mock_response
@@ -222,8 +224,8 @@ This is a test README file.
         )
 
         # Verify result
-        self.assertIn("<notes>Some notes</notes>", result)
-        self.assertIn("<ask>What color?</ask>", result)
+        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n<ask>What size?</ask></submit>\n</session>"
+        self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_base.anthropic.Anthropic")
     def test_generate_leaf_api_error(self, mock_anthropic):
@@ -246,7 +248,7 @@ This is a test README file.
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.completion = "Incomplete response"
+        mock_response.completion = "submit>Incomplete response"
         mock_response.stop_reason = "max_tokens"
         mock_client.completions.create.return_value = mock_response
 

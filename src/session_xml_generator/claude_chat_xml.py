@@ -31,7 +31,8 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
         transcript_content = ""
         if examples_xml:
             transcript_content += examples_xml + "\n\n"
-        transcript_content += f"<session>\n<prompt>{prompt}</prompt>\n<"
+        session_xml_start = f"<session>\n<prompt>{prompt}</prompt>\n<"
+        transcript_content += session_xml_start
 
         # Create messages
         messages = [
@@ -42,14 +43,15 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
         ]
 
         # Call API
-        return call_claude_chat(
+        response = call_claude_chat(
             system_prompt=CLI_SIMULATION_SYSTEM_PROMPT,
             messages=messages,
             model=self.model,
             max_tokens=self.max_tokens,
-            stop_sequences=["</submit>"],
+            stop_sequences=[self.STOP_SEQUENCE],
             temperature=self.temperature,
         )
+        return f"{session_xml_start}{response}{self.STOP_SEQUENCE}\n</session>"
 
 
 if __name__ == "__main__":

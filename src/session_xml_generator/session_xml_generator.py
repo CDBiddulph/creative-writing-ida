@@ -18,6 +18,8 @@ class SessionXmlGenerator(ABC):
         parent_examples_xml_path: Path to parent examples XML file
     """
 
+    STOP_SEQUENCE = "</submit>"
+
     def __init__(
         self,
         model: str,
