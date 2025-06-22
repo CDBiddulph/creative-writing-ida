@@ -24,8 +24,35 @@ class ClaudeBaseSessionXmlGenerator(SessionXmlGenerator):
 
     def continue_parent(self, current_xml: str) -> str:
         """Continue generating a parent session from existing XML."""
-        # To be implemented
-        raise NotImplementedError("continue_parent method not yet implemented")
+        # Load content
+        readme_content = self._load_readme_content(self.parent_readme_path)
+        examples_xml = self._load_examples_xml(self.parent_examples_xml_path)
+
+        # Build prompt with current XML state
+        full_prompt = readme_content + "\n\n## Transcripts\n\n"
+        if examples_xml:
+            full_prompt += examples_xml + "\n\n"
+        full_prompt += current_xml
+
+        # Call API to continue
+        response = call_claude_base(
+            prompt=full_prompt,
+            model=self.model,
+            max_tokens=self.max_tokens,
+            stop_sequences=self.STOP_SEQUENCES,
+            temperature=self.temperature,
+        )
+        
+        # Combine current XML with continuation
+        # The response text should be prefixed with < since it continues from where the session left off
+        continuation_text = "\n<" + response.text + response.stop_sequence
+        
+        # If the response ends with </submit>, add </session> to close it
+        if response.stop_sequence == "</submit>":
+            continuation_text += "\n</session>"
+        
+        # Return the complete session XML
+        return current_xml + continuation_text
 
     def _generate_session(
         self, prompt: str, readme_content: str, examples_xml: str
@@ -47,7 +74,13 @@ class ClaudeBaseSessionXmlGenerator(SessionXmlGenerator):
         )
         # The response doesn't include the stop sequence, so we need to add it
         # Use the actual stop sequence returned by the API
-        return f"{session_xml_start}{response.text}{response.stop_sequence}\n</session>"
+        result = f"{session_xml_start}{response.text}{response.stop_sequence}"
+        
+        # Only add </session> if we ended with </submit>
+        if response.stop_sequence == "</submit>":
+            result += "\n</session>"
+        
+        return result
 
 
 if __name__ == "__main__":

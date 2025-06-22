@@ -225,7 +225,7 @@ This is a test README file.
         )
 
         # Verify result
-        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>\n</session>"
+        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>"
         self.assertEqual(result, expected_result)
 
     @patch("src.llms.claude_base.anthropic.Anthropic")
@@ -399,11 +399,9 @@ This is a test README file.
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.completion = (
-            "submit>Final content based on all responses</submit>\n</session>"
-        )
+        mock_response.completion = "submit>Final content based on all responses"
         mock_response.stop_reason = "stop_sequence"
-        mock_response.stop = "</submit>"
+        mock_response.stop_sequence = "</submit>"
         mock_client.completions.create.return_value = mock_response
 
         # Current XML with multiple responses
