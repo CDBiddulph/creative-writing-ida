@@ -10,6 +10,22 @@ class XmlValidator:
     LEAF_ALLOWED_TAGS = {"prompt", "submit"}
     PARENT_ALLOWED_TAGS = {"prompt", "submit", "notes", "ask", "response"}
 
+    def get_is_xml_partial_or_fail(self, session_xml: str, is_leaf: bool) -> bool:
+        """
+        If the XML is valid and partial, return True. If it is valid and complete, return False.
+        If the XML is invalid, raise a ValueError.
+
+        Args:
+            session_xml: XML string to validate.
+            is_leaf: True if we want to validate this as a leaf node, False if parent node. If
+            `is_leaf` is True, the XML should never be partial, so it will either raise a
+            ValueError or return False.
+
+        Returns:
+            bool: True if XML is partial, False if XML is complete or invalid
+        """
+        raise NotImplementedError("Not implemented")
+
     def validate_session_xml(
         self, session_xml: str, is_leaf: bool, is_partial: bool = False
     ) -> bool:

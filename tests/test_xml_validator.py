@@ -415,6 +415,71 @@ class TestXmlValidator(unittest.TestCase):
             self.validator.validate_session_xml(xml, is_leaf=False, is_partial=True)
         )
 
+    def test_get_is_xml_partial_or_fail_leaf_valid_partial(self):
+        """Test that get_is_xml_partial_or_fail returns True for valid partial XML."""
+        xml = """
+        <session>
+            <prompt>Prompt</prompt>
+            <ask>Ask</ask>
+        """
+        self.assertTrue(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=True))
+
+    def test_get_is_xml_partial_or_fail_leaf_valid_complete(self):
+        """Test that get_is_xml_partial_or_fail returns False for valid complete XML."""
+        xml = """
+        <session>
+            <prompt>Prompt</prompt>
+            <ask>Ask</ask>
+            <response>Response</response>
+            <submit>Submit</submit>
+        </session>
+        """
+        self.assertFalse(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=True))
+
+    def test_get_is_xml_partial_or_fail_leaf_invalid(self):
+        """Test that get_is_xml_partial_or_fail raises a ValueError for invalid XML in a leaf."""
+        xml = """
+        <session>
+            <prompt>Prompt</prompt>
+            <ask>Ask</ask>
+            <response>Response</response>
+            <submit>Submit</submit>
+        </session>
+        """
+        with self.assertRaises(ValueError):
+            self.validator.get_is_xml_partial_or_fail(xml, is_leaf=True)
+
+    def test_get_is_xml_partial_or_fail_parent_complete(self):
+        """Test that get_is_xml_partial_or_fail returns False for valid complete XML."""
+        xml = """
+        <session>
+            <prompt>Prompt</prompt>
+            <ask>Ask</ask>
+            <response>Response</response>
+            <submit>Submit</submit>
+        </session>
+        """
+        self.assertFalse(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=False))
+
+    def test_get_is_xml_partial_or_fail_parent_partial(self):
+        """Test that get_is_xml_partial_or_fail returns True for valid partial XML."""
+        xml = """
+        <session>
+            <prompt>Prompt</prompt>
+            <ask>Ask</ask>
+        """
+        self.assertTrue(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=False))
+
+    def test_get_is_xml_partial_or_fail_parent_invalid(self):
+        """Test that get_is_xml_partial_or_fail returns False for valid complete XML."""
+        xml = """
+        <session>
+            <prompt>Prompt</prompt>
+            <ask>Ask
+        """
+        with self.assertRaises(ValueError):
+            self.validator.get_is_xml_partial_or_fail(xml, is_leaf=False)
+
 
 if __name__ == "__main__":
     unittest.main()
