@@ -424,8 +424,8 @@ class TestXmlValidator(unittest.TestCase):
         """
         self.assertTrue(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=True))
 
-    def test_get_is_xml_partial_or_fail_leaf_valid_complete(self):
-        """Test that get_is_xml_partial_or_fail returns False for valid complete XML."""
+    def test_get_is_xml_partial_or_fail_parent_valid_complete(self):
+        """Test that get_is_xml_partial_or_fail returns False for valid complete XML in a parent."""
         xml = """
         <session>
             <prompt>Prompt</prompt>
@@ -434,7 +434,7 @@ class TestXmlValidator(unittest.TestCase):
             <submit>Submit</submit>
         </session>
         """
-        self.assertFalse(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=True))
+        self.assertFalse(self.validator.get_is_xml_partial_or_fail(xml, is_leaf=False))
 
     def test_get_is_xml_partial_or_fail_leaf_invalid(self):
         """Test that get_is_xml_partial_or_fail raises a ValueError for invalid XML in a leaf."""

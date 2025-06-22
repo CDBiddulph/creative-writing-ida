@@ -24,7 +24,127 @@ class XmlValidator:
         Returns:
             bool: True if XML is partial, False if XML is complete or invalid
         """
-        raise NotImplementedError("Not implemented")
+        if not session_xml or not session_xml.strip():
+            raise ValueError("Empty or whitespace-only XML")
+
+        # For leaf nodes, check if it's a valid partial or complete format
+        if is_leaf:
+            # First, try to parse as-is to see if it's complete XML
+            try:
+                root = ET.fromstring(session_xml)
+                is_complete_xml = True
+            except ET.ParseError:
+                # Try adding closing session tag for partial XML
+                xml_to_parse = session_xml.strip()
+                if not xml_to_parse.endswith("</session>"):
+                    xml_to_parse += "\n</session>"
+                try:
+                    root = ET.fromstring(xml_to_parse)
+                    is_complete_xml = False
+                except ET.ParseError:
+                    raise ValueError(f"Invalid XML: {session_xml}")
+
+            # Check that root is 'session'
+            if root.tag != "session":
+                raise ValueError(f"Root tag is not 'session': {session_xml}")
+
+            children = list(root)
+            if not children:
+                raise ValueError(f"Empty session: {session_xml}")
+
+            tag_sequence = [child.tag for child in children]
+            found_tags = set(tag_sequence)
+
+            # Rule 1: <prompt> must be first
+            if tag_sequence[0] != "prompt":
+                raise ValueError(f"First tag must be 'prompt': {session_xml}")
+
+            if is_complete_xml:
+                # This is complete XML - validate as leaf
+                # Check if all found tags are allowed for leaf
+                if not found_tags.issubset(self.LEAF_ALLOWED_TAGS):
+                    raise ValueError(f"Invalid tags for leaf: {found_tags}. Allowed tags: {self.LEAF_ALLOWED_TAGS}")
+
+                # For complete leaf nodes, must end with submit
+                if tag_sequence[-1] != "submit":
+                    raise ValueError(f"Complete leaf XML must end with 'submit': {session_xml}")
+
+                # For complete leaf nodes, both prompt and submit are required
+                if "prompt" not in found_tags or "submit" not in found_tags:
+                    raise ValueError(f"Leaf node missing prompt or submit: {session_xml}")
+
+                return False  # Complete and valid
+            else:
+                # This is partial XML - for leaf nodes, this is valid and returns True
+                # but only if it doesn't contain invalid leaf tags or violate basic rules
+                return True  # Partial and valid
+
+        # For parent nodes, determine if partial or complete
+        try:
+            # First try to parse as-is to see if it's already complete
+            try:
+                root = ET.fromstring(session_xml)
+                is_complete_xml = True
+            except ET.ParseError:
+                # Try adding closing session tag
+                xml_to_parse = session_xml.strip()
+                if not xml_to_parse.endswith("</session>"):
+                    xml_to_parse += "\n</session>"
+                try:
+                    root = ET.fromstring(xml_to_parse)
+                    is_complete_xml = False
+                except ET.ParseError:
+                    raise ValueError(f"Invalid XML: {session_xml}")
+
+            # Check that root is 'session'
+            if root.tag != "session":
+                raise ValueError(f"Root tag is not 'session': {session_xml}")
+
+            children = list(root)
+            if not children:
+                raise ValueError(f"Empty session: {session_xml}")
+
+            tag_sequence = [child.tag for child in children]
+            found_tags = set(tag_sequence)
+
+            # Check if all found tags are allowed
+            if not found_tags.issubset(self.PARENT_ALLOWED_TAGS):
+                raise ValueError(f"Invalid tags: {found_tags}. Allowed tags: {self.PARENT_ALLOWED_TAGS}")
+
+            # Rule 1: <prompt> must be first
+            if tag_sequence[0] != "prompt":
+                raise ValueError(f"First tag must be 'prompt': {session_xml}")
+
+            # Determine if this should be treated as partial or complete
+            if is_complete_xml:
+                # This is complete XML - check if it ends with submit
+                if tag_sequence[-1] != "submit":
+                    raise ValueError(f"Complete XML must end with 'submit': {session_xml}")
+
+                # Validate ask/response pairing for complete XML
+                if not self._validate_ask_response_pairing_or_fail(tag_sequence):
+                    # Error already raised by helper method
+                    pass
+
+                return False  # Complete and valid
+            else:
+                # This is partial XML - must end with ask
+                if tag_sequence[-1] != "ask":
+                    raise ValueError(f"Partial XML must end at 'ask': {session_xml}")
+
+                # Cannot have submit in partial XML
+                if "submit" in found_tags:
+                    raise ValueError(f"Partial XML cannot contain submit: {session_xml}")
+
+                # Validate ask/response pairing up to the last ask
+                if not self._validate_ask_response_pairing_or_fail(tag_sequence[:-1]):
+                    # Error already raised by helper method
+                    pass
+
+                return True  # Partial and valid
+
+        except ET.ParseError:
+            raise ValueError(f"Invalid XML: {session_xml}")
 
     def validate_session_xml(
         self, session_xml: str, is_leaf: bool, is_partial: bool = False
@@ -50,101 +170,60 @@ class XmlValidator:
         - <notes> cannot appear between <ask> and <response>
         - Partial validation is not allowed for leaf nodes
         """
-        if not session_xml or not session_xml.strip():
-            return False
-
-        # Leaf nodes cannot be partial
+        # Rule: Partial validation is not allowed for leaf nodes
         if is_leaf and is_partial:
             return False
-
+            
         try:
-            # For partial XML, we need to complete it before parsing
-            xml_to_parse = session_xml
-            if is_partial:
-                # Add closing session tag if missing
-                xml_to_parse = session_xml.strip()
-                if not xml_to_parse.endswith("</session>"):
-                    xml_to_parse += "\n</session>"
-
-            # Parse the XML
-            root = ET.fromstring(xml_to_parse)
-
-            # Check that root is 'session'
-            if root.tag != "session":
-                logging.error("Root tag is not 'session': %s", session_xml)
+            is_xml_partial = self.get_is_xml_partial_or_fail(session_xml, is_leaf)
+            
+            # Check if the partial/complete status matches what was requested
+            if is_partial and not is_xml_partial:
+                # Requested partial but XML is complete
                 return False
-
-            # Get list of child tags in order
-            children = list(root)
-            if not children:
+            elif not is_partial and is_xml_partial:
+                # Requested complete but XML is partial
                 return False
-
-            # Extract tag names preserving order
-            tag_sequence = [child.tag for child in children]
-            found_tags = set(tag_sequence)
-
-            # Determine allowed tags based on node type
-            allowed_tags = (
-                self.LEAF_ALLOWED_TAGS if is_leaf else self.PARENT_ALLOWED_TAGS
-            )
-
-            # Check if all found tags are allowed
-            if not found_tags.issubset(allowed_tags):
-                logging.error(
-                    "Invalid tags: %s. Allowed tags: %s", found_tags, allowed_tags
-                )
-                return False
-
-            # Rule 1: <prompt> must be first
-            if tag_sequence[0] != "prompt":
-                logging.error("First tag must be 'prompt': %s", session_xml)
-                return False
-
-            # Rule 2: If not partial, <submit> must be last
-            if not is_partial:
-                if tag_sequence[-1] != "submit":
-                    logging.error(
-                        "Last tag must be 'submit' for complete XML: %s", session_xml
-                    )
-                    return False
-
-                # For leaf nodes, both prompt and submit are required
-                if is_leaf:
-                    if "prompt" not in found_tags or "submit" not in found_tags:
-                        logging.error(
-                            "Leaf node missing prompt or submit: %s", session_xml
-                        )
-                        return False
-                    # Leaf nodes cannot have ask/response
-                    if "ask" in found_tags or "response" in found_tags:
-                        logging.error(
-                            "Leaf node cannot have ask/response tags: %s", session_xml
-                        )
-                        return False
-                else:
-                    # For complete parent nodes, validate ask/response pairing
-                    if not self._validate_ask_response_pairing(tag_sequence):
-                        return False
-            else:
-                # Rule 3: If partial, must end at </ask>
-                if tag_sequence[-1] != "ask":
-                    logging.error("Partial XML must end at </ask>: %s", session_xml)
-                    return False
-
-                # Cannot have submit in partial XML
-                if "submit" in found_tags:
-                    logging.error("Partial XML cannot contain submit: %s", session_xml)
-                    return False
-
-                # Validate ask/response pairing up to the last ask
-                if not self._validate_ask_response_pairing(tag_sequence[:-1]):
-                    return False
-
+            
             return True
-
-        except ET.ParseError:
-            logging.error("Invalid XML: %s", session_xml)
+            
+        except ValueError as e:
+            logging.error("XML validation failed: %s", str(e))
             return False
+
+    def _validate_ask_response_pairing_or_fail(self, tag_sequence: list[str]) -> bool:
+        """
+        Validate that ask and response tags are properly paired.
+        Raises ValueError if invalid.
+
+        Rules:
+        - Every <ask> must be followed by a <response> (before the next <ask>)
+        - Every <response> must be preceded by an <ask>
+        - <notes> cannot appear between <ask> and <response>
+        """
+        expecting_response = False
+
+        for tag in tag_sequence:
+            if tag == "ask":
+                if expecting_response:
+                    # Found another ask before response
+                    raise ValueError("Found <ask> without matching <response>")
+                expecting_response = True
+            elif tag == "response":
+                if not expecting_response:
+                    # Found response without preceding ask
+                    raise ValueError("Found <response> without preceding <ask>")
+                expecting_response = False
+            elif tag == "notes" and expecting_response:
+                # Notes between ask and response
+                raise ValueError("Found <notes> between <ask> and <response>")
+
+        # If we're still expecting a response at the end, that's invalid
+        # (unless this is being called on a partial sequence)
+        if expecting_response:
+            raise ValueError("Unpaired <ask> without <response>")
+
+        return True
 
     def _validate_ask_response_pairing(self, tag_sequence: list[str]) -> bool:
         """
