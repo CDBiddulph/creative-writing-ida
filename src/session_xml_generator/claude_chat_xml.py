@@ -24,6 +24,11 @@ class ClaudeChatSessionXmlGenerator(SessionXmlGenerator):
 
         return self._generate_session(prompt, readme_content, examples_xml)
 
+    def continue_parent(self, current_xml: str) -> str:
+        """Continue generating a parent session from existing XML."""
+        # To be implemented
+        raise NotImplementedError("continue_parent method not yet implemented")
+
     def _generate_session(
         self, prompt: str, readme_content: str, examples_xml: str
     ) -> str:

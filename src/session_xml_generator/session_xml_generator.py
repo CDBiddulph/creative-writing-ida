@@ -48,6 +48,11 @@ class SessionXmlGenerator(ABC):
         """Generate a parent session."""
         pass
 
+    @abstractmethod
+    def continue_parent(self, current_xml: str) -> str:
+        """Continue generating a parent session from existing XML."""
+        pass
+
     def _load_readme_content(self, readme_path: str) -> str:
         """Load README content from file."""
         with open(readme_path, "r") as f:
