@@ -49,11 +49,7 @@ class TreeRunner:
         then saves the result as a timestamped XML file.
         """
         # Generate the complete tree
-        root_node = self.session_processor.process_session(
-            prompt=initial_prompt,
-            depth=0,
-            session_id=0
-        )
+        root_node = self.session_processor.process_session(initial_prompt)
         
         # Format as XML
         formatted_xml = self.xml_formatter.format_tree_xml(root_node)
