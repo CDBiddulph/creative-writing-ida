@@ -16,19 +16,19 @@ def call_claude_base(
     temperature: float = 0.7,
 ) -> LlmResponse:
     """Call the Claude Completions API with constructed prompt.
-    
+
     Returns:
         LlmResponse containing the response text and the stop sequence that ended generation.
-        
+
     Raises:
         RuntimeError: If the API doesn't stop at one of the expected sequences.
     """
 
-    logging.info(f"Sending request to Claude Completions API...")
-    logging.info(f"  Prompt: {shorten_for_logging(prompt)}")
-    logging.info(f"  Model: {model}")
-    logging.info(f"  Max tokens: {max_tokens}")
-    logging.info(f"  Temperature: {temperature}")
+    logging.debug(f"Sending request to Claude Completions API...")
+    logging.debug(f"  Prompt: {shorten_for_logging(prompt)}")
+    logging.debug(f"  Model: {model}")
+    logging.debug(f"  Max tokens: {max_tokens}")
+    logging.debug(f"  Temperature: {temperature}")
 
     client = anthropic.Anthropic()
 
@@ -45,7 +45,7 @@ def call_claude_base(
     # The API provides stop_sequence attribute when stopped by a stop sequence
     stop_sequence = response.stop_sequence
 
-    logging.info(
+    logging.debug(
         f"Claude Completions API response: {shorten_for_logging(response_text)}"
     )
 
@@ -54,7 +54,7 @@ def call_claude_base(
         raise RuntimeError(
             f"API call did not complete properly. Completion: {response_text}. Stop reason: {stop_reason}. Expected stop sequences: {stop_sequences}"
         )
-    
+
     # Check that we have a valid stop sequence
     if stop_sequence is None:
         raise RuntimeError(

@@ -17,22 +17,22 @@ def call_claude_chat(
     temperature: float = 0.7,
 ) -> LlmResponse:
     """Call the Claude API with a chat model simulating a base model using CLI simulation.
-    
+
     Returns:
         LlmResponse containing the response text and the stop sequence that ended generation.
-        
+
     Raises:
         RuntimeError: If the API doesn't stop at one of the expected sequences.
     """
-    logging.info(f"Sending request to Claude Chat Model API...")
-    logging.info(f"  Messages:")
+    logging.debug(f"Sending request to Claude Chat Model API...")
+    logging.debug(f"  Messages:")
     for message in messages:
-        logging.info(
+        logging.debug(
             f"    {message['role']}: {shorten_for_logging(message['content'])}"
         )
-    logging.info(f"  Model: {model}")
-    logging.info(f"  Max tokens: {max_tokens}")
-    logging.info(f"  Temperature: {temperature}")
+    logging.debug(f"  Model: {model}")
+    logging.debug(f"  Max tokens: {max_tokens}")
+    logging.debug(f"  Temperature: {temperature}")
 
     client = anthropic.Anthropic()
 
@@ -53,7 +53,7 @@ def call_claude_chat(
     # The API provides stop_sequence attribute when stopped by a stop sequence
     stop_sequence = response.stop_sequence
 
-    logging.info(
+    logging.debug(
         f"Claude Chat Model API response: {shorten_for_logging(response_text)}"
     )
 
@@ -62,7 +62,7 @@ def call_claude_chat(
         raise RuntimeError(
             f"API call did not complete properly. Completion: {response_text}. Stop reason: {stop_reason}. Expected stop sequences: {stop_sequences}"
         )
-    
+
     # Check that we have a valid stop sequence
     if stop_sequence is None:
         raise RuntimeError(
