@@ -1,5 +1,6 @@
 """Handles incremental processing of sessions with recursive tree building."""
 
+import logging
 import xml.etree.ElementTree as ET
 from .tree_node import TreeNode
 
@@ -44,181 +45,153 @@ class SessionProcessor:
         tag. The entire session_xml will be wrapped in a <session> tag.
         """
         self.next_session_id = 0
-        return self._process_node(prompt, 0)
+        return self._process_new_node(prompt, 0)
 
-    def _process_node(self, prompt: str, depth: int) -> TreeNode:
+    def _process_new_node(self, prompt: str, depth: int) -> TreeNode:
         """
         Process a single node recursively.
-        
+
         Args:
             prompt: The prompt for this node
             depth: Current depth in the tree
-            
+
         Returns:
             TreeNode: Processed node with all children
         """
         session_id = self.next_session_id
         self.next_session_id += 1
-        
+
         node = TreeNode(session_id=session_id, prompt=prompt, depth=depth)
-        
+
         # Determine if this should be a leaf node
         is_leaf = depth >= self.max_depth
-        
-        if is_leaf:
-            # Generate leaf content
-            session_xml = self._generate_with_retry(
-                lambda: self.xml_generator.generate_leaf(prompt), is_leaf=True
-            )
-            node.session_xml = session_xml
-        else:
-            # Generate parent content
+
+        try:
+            if is_leaf:
+                # Generate leaf content
+                session_xml = self._generate_with_retry(
+                    lambda: self.xml_generator.generate_leaf(prompt), is_leaf=True
+                )
+                node.session_xml = session_xml
+                return node
+
+            # Generate initial parent content
             session_xml = self._generate_with_retry(
                 lambda: self.xml_generator.generate_parent(prompt), is_leaf=False
             )
-            
-            if session_xml == "FAILED":
-                node.session_xml = "FAILED"
-                return node
-            
-            # Process this parent node incrementally
-            node = self._process_parent_node(node, session_xml)
-        
-        return node
+            return self._continue_parent_node(node, initial_xml=session_xml)
+        except Exception as e:
+            logging.error(f"Error processing node {node.session_id}: {e}")
+            node.session_xml = "FAILED"
+            return node
 
-    def _process_parent_node(self, node: TreeNode, initial_xml: str) -> TreeNode:
+    def _continue_parent_node(self, node: TreeNode, initial_xml: str) -> TreeNode:
         """
-        Process a parent node by handling asks and responses incrementally.
-        
+        Continue a partially generated parent node by handling asks and responses incrementally.
+
+        Uses continue_parent to generate the next part of the XML until it is complete.
+
         Args:
             node: The TreeNode being processed
             initial_xml: Initial XML from generate_parent
-            
+
         Returns:
             TreeNode: Updated node with children and final XML
         """
-        current_xml = initial_xml
-        
-        while True:
-            # Check if current XML ends with an ask (partial)
-            if self._xml_ends_with_ask(current_xml):
-                # Extract the ask text and create child
-                ask_text = self._extract_last_ask_text(current_xml)
-                child_node = self._process_node(ask_text, node.depth + 1)
-                node.add_child(child_node)
-                
-                # Get response text (either child's content or "FAILED")
-                response_text = self._extract_response_from_child(child_node)
-                
-                # Add response to current XML before calling continue_parent
-                xml_with_response = self._add_response_to_xml(current_xml, response_text)
-                continued_xml = self._generate_with_retry(
-                    lambda: self.xml_generator.continue_parent(xml_with_response), 
-                    is_leaf=False
-                )
-                
-                if continued_xml == "FAILED":
-                    node.session_xml = "FAILED"
-                    return node
-                
-                current_xml = continued_xml
-            else:
-                # XML is complete (ends with submit)
-                node.session_xml = current_xml
-                break
-                
-        return node
+        # We should already know that this is valid, this just gets is_partial.
+        is_partial = self.xml_validator.get_is_xml_partial_or_fail(
+            initial_xml, is_leaf=False
+        )
+
+        # If complete, return the node now.
+        if not is_partial:
+            node.session_xml = initial_xml
+            return node
+
+        # Extract the last ask text
+        last_ask_text = self._extract_last_ask_text(initial_xml)
+        new_child_node = self._process_new_node(last_ask_text, node.depth + 1)
+        node.children.append(new_child_node)
+
+        child_response = self._extract_response_from_child(new_child_node)
+        # Generate the next part of the XML
+        xml_with_response = self._add_response_to_xml(initial_xml, child_response)
+
+        # Recursively continue building the node
+        return self._continue_parent_node(node, initial_xml=xml_with_response)
 
     def _generate_with_retry(self, generate_func, is_leaf: bool) -> str:
         """
         Generate content with retry logic for validation failures.
-        
+
         Args:
             generate_func: Function that generates XML content
             is_leaf: Whether this is for a leaf node
-            
+
         Returns:
-            str: Generated XML or "FAILED" if max retries exceeded
+            str: Generated XML.
+
+        Raises:
+            RuntimeError: If the XML is invalid after max retries.
         """
-        for attempt in range(self.max_retries + 1):
+        e = None
+        for _ in range(self.max_retries + 1):
             try:
                 xml_content = generate_func()
-                
-                # Validate the XML
-                if is_leaf:
-                    # For leaf nodes, should be complete
-                    if self.xml_validator.validate_session_xml(xml_content, is_leaf=True, is_partial=False):
-                        return xml_content
-                else:
-                    # For parent nodes, check if partial or complete
-                    try:
-                        is_partial = self.xml_validator.get_is_xml_partial_or_fail(xml_content, is_leaf=False)
-                        if self.xml_validator.validate_session_xml(xml_content, is_leaf=False, is_partial=is_partial):
-                            return xml_content
-                    except ValueError:
-                        # Invalid XML, will retry
-                        pass
-                        
-            except Exception:
-                # Generation failed, will retry
-                pass
-        
-        return "FAILED"
+                # Don't use the result for now, we'll check it later
+                _ = self.xml_validator.get_is_xml_partial_or_fail(
+                    xml_content, is_leaf=is_leaf
+                )
+                return xml_content
+            except Exception as e:
+                logging.warning(f"Invalid XML: {xml_content}. Error: {e}")
 
-    def _xml_ends_with_ask(self, xml_content: str) -> bool:
-        """Check if XML ends with an ask tag (is partial)."""
-        try:
-            # Try parsing as-is first
-            try:
-                root = ET.fromstring(xml_content)
-                # If it parses as-is, check if last child is ask
-                children = list(root)
-                return children and children[-1].tag == "ask"
-            except ET.ParseError:
-                # Try adding closing session tag
-                xml_to_parse = xml_content.strip()
-                if not xml_to_parse.endswith("</session>"):
-                    xml_to_parse += "\n</session>"
-                root = ET.fromstring(xml_to_parse)
-                children = list(root)
-                return children and children[-1].tag == "ask"
-        except ET.ParseError:
-            return False
+        logging.error(f"Failed to generate XML after {self.max_retries} attempts")
+        if e is None:
+            raise RuntimeError(f"Error message not set. This should never happen.")
+        raise e
 
     def _extract_last_ask_text(self, xml_content: str) -> str:
         """Extract the text content of the last ask tag."""
-        try:
-            # Try parsing as-is first
-            try:
-                root = ET.fromstring(xml_content)
-            except ET.ParseError:
-                # Try adding closing session tag
-                xml_to_parse = xml_content.strip()
-                if not xml_to_parse.endswith("</session>"):
-                    xml_to_parse += "\n</session>"
-                root = ET.fromstring(xml_to_parse)
-                
-            children = list(root)
-            if children and children[-1].tag == "ask":
-                return children[-1].text or ""
-            return ""
-        except ET.ParseError:
-            return ""
+        # Add closing session tag, since it currently ends with </ask>.
+        xml_to_parse = xml_content + "\n</session>"
+        root = ET.fromstring(xml_to_parse)
+
+        children = list(root)
+        assert (
+            children
+        ), f"No children found in {xml_to_parse}. This should never happen."
+        assert (
+            children[-1].tag == "ask"
+        ), f"Last child is not an <ask>: {children[-1].tag}. This should never happen."
+
+        result = children[-1].text
+        assert result, f"No text found in {xml_to_parse}. This should never happen."
+        return result
 
     def _extract_response_from_child(self, child_node: TreeNode) -> str:
         """Extract response text from a child node's session_xml."""
         if child_node.session_xml == "FAILED":
             return "FAILED"
-        
+
         try:
             root = ET.fromstring(child_node.session_xml)
-            children = list(root)
-            for child in children:
-                if child.tag == "submit":
-                    return child.text or ""
-            return ""
         except ET.ParseError:
-            return "FAILED"
+            raise RuntimeError(
+                f"Failed to parse {child_node.session_xml}. This should never happen."
+            )
+
+        children = list(root)
+        assert (
+            children
+        ), f"No children found in {child_node.session_xml}. This should never happen."
+        assert (
+            children[-1].tag == "submit"
+        ), f"Last child is not a <submit>: {children[-1].tag}. This should never happen."
+        assert children[
+            -1
+        ].text, f"No submit text found in {child_node.session_xml}. This should never happen."
+        return children[-1].text
 
     def _add_response_to_xml(self, xml_content: str, response_text: str) -> str:
         """Add a response tag to the XML after the last ask."""
@@ -227,7 +200,11 @@ class SessionProcessor:
             # Complete XML - insert before closing tag
             insertion_point = xml_content.rfind("</session>")
             response_tag = f"\n<response>{response_text}</response>"
-            return xml_content[:insertion_point] + response_tag + xml_content[insertion_point:]
+            return (
+                xml_content[:insertion_point]
+                + response_tag
+                + xml_content[insertion_point:]
+            )
         else:
             # Partial XML - just append
             return xml_content + f"\n<response>{response_text}</response>"
