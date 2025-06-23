@@ -110,9 +110,10 @@ class SessionProcessor:
                 # Get response text (either child's content or "FAILED")
                 response_text = self._extract_response_from_child(child_node)
                 
-                # continue_parent handles adding the response internally
+                # Add response to current XML before calling continue_parent
+                xml_with_response = self._add_response_to_xml(current_xml, response_text)
                 continued_xml = self._generate_with_retry(
-                    lambda: self.xml_generator.continue_parent(current_xml), 
+                    lambda: self.xml_generator.continue_parent(xml_with_response), 
                     is_leaf=False
                 )
                 
