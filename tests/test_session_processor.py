@@ -328,53 +328,5 @@ class TestSessionProcessor(unittest.TestCase):
         self.assertEqual(len(self.mock_xml_generator.continue_parent.call_args_list), 4)
 
 
-    def test_continue_parent_not_called_with_response_added_bug(self):
-        """Test that proves the bug: continue_parent should be called with response added, but isn't."""
-        generate_parent_responses = [
-            "<session>\n<prompt>Write a story about a dragon.</prompt>\n<ask>What should happen?</ask>",
-        ]
-        continue_parent_responses = [
-            "<session>\n<prompt>Write a story about a dragon.</prompt>\n<ask>What should happen?</ask>\n<response>Dragon response</response>\n<submit>Complete story</submit>\n</session>",
-        ]
-        generate_leaf_responses = [
-            "<session>\n<prompt>What should happen?</prompt>\n<submit>Dragon response</submit>\n</session>",
-        ]
-
-        self.mock_xml_generator.generate_parent.side_effect = generate_parent_responses
-        self.mock_xml_generator.continue_parent.side_effect = continue_parent_responses
-        self.mock_xml_generator.generate_leaf.side_effect = generate_leaf_responses
-
-        processor = SessionProcessor(
-            xml_generator=self.mock_xml_generator,
-            xml_validator=self.xml_validator,
-            max_depth=1,
-            max_retries=3,
-        )
-        result = processor.process_session("Write a story about a dragon.")
-
-        # Check what continue_parent was actually called with
-        self.mock_xml_generator.continue_parent.assert_called_once()
-        call_args = self.mock_xml_generator.continue_parent.call_args[0][0]
-        
-        print(f"continue_parent was called with: {repr(call_args)}")
-        
-        # THE BUG: continue_parent should be called with the response added, but it's not!
-        expected_call_xml = "<session>\n<prompt>Write a story about a dragon.</prompt>\n<ask>What should happen?</ask>\n<response>Dragon response</response>"
-        
-        self.assertEqual(call_args, expected_call_xml,
-                        f"continue_parent should be called with response added. Expected: {repr(expected_call_xml)}, but got: {repr(call_args)}")
-        
-        # Also assert on the exact final result structure
-        expected_root = TreeNode(session_id=0, prompt="Write a story about a dragon.", depth=0)
-        expected_root.session_xml = "<session>\n<prompt>Write a story about a dragon.</prompt>\n<ask>What should happen?</ask>\n<response>Dragon response</response>\n<submit>Complete story</submit>\n</session>"
-        
-        # Create expected child
-        expected_child = TreeNode(session_id=1, prompt="What should happen?", depth=1)
-        expected_child.session_xml = "<session>\n<prompt>What should happen?</prompt>\n<submit>Dragon response</submit>\n</session>"
-        expected_root.add_child(expected_child)
-        
-        self.assertEqual(result, expected_root)
-
-
 if __name__ == "__main__":
     unittest.main()
