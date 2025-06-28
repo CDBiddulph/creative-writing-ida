@@ -2,11 +2,8 @@
 <sessions>
 
 <session>
-<prompt>
-Write a story using the following prompt: A well-intentioned medical policy slowly erodes personal bodily autonomy.
-</prompt>
-<submit>
-The organ donation system moved from opt-in to opt-out, from affirmative consent to presumed consent.
+<prompt>Write a story using the following prompt: A well-intentioned medical policy slowly erodes personal bodily autonomy.</prompt>
+<submit>The organ donation system moved from opt-in to opt-out, from affirmative consent to presumed consent.
 
 It was the toxins in the air and the water, which were hard on the internal organs, seeing people die before their time. The idea that you should have some say about what happens to your body after death began to seem quaint, when so many people were in such great need.
 
@@ -20,32 +17,24 @@ So people started building little kits, theoretical at first, that would automat
 
 There was a tattoo you could get, by way or warning, just in case you were worried that you'd be unconscious and the hospital was going to chop you up for parts even though you were healthy. They likened it to poisonous snakes, a "do not consume" warning. The ratio was insane, something like a hundred people with the tattoo to every one person with an actual implant.
 
-But in the end, they were the minority. People accepted it, by and large. You'd get a bombing at an organ harvesting office every few months, and regular protests, but it didn't change much. Society had made its decision, it seemed.
-</submit>
+But in the end, they were the minority. People accepted it, by and large. You'd get a bombing at an organ harvesting office every few months, and regular protests, but it didn't change much. Society had made its decision, it seemed.</submit>
 </session>
 
 <session>
-<prompt>
-A wizard in my story only knows one spell. Come up with a list of humorous ideas for spells. This will be the centerpiece of the story.
-</prompt>
-<submit>
-The spell could be:
+<prompt>A wizard in my story only knows one spell. Come up with a list of humorous ideas for spells. This will be the centerpiece of the story.</prompt>
+<submit>The spell could be:
 - summoning ducks
 - making things slightly colder
 - making everyone in a 10-foot radius hear elevator music
 - turning things into cheese, very slowly
 - an evil wizard who makes people sneeze once, and lies that it's the onset of a terrible disease
 - creating a single spark, which he overuses in attempts to seem dramatic
-- teleporting five inches to the left
-</submit>
+- teleporting five inches to the left</submit>
 </session>
 
 <session>
-<prompt>
-Write a story using the following prompt: Laughter really is the best medicine.
-</prompt>
-<submit>
-Laughter is the best medicine.
+<prompt>Write a story using the following prompt: Laughter really is the best medicine.</prompt>
+<submit>Laughter is the best medicine.
 
 A guy comes into our emergency room tachycardic and barely awake.
 
@@ -69,21 +58,16 @@ He flatlines, goes unconscious, and I swear under my breath.
 
 "But doctor," says the nurse.
 
-"Desperate times," I say, hoping that if this man wakes up, he'll forgive me.
-</submit>
+"Desperate times," I say, hoping that if this man wakes up, he'll forgive me.</submit>
 </session>
 
 <session>
-<prompt>
-What are the psychological implications of being able to duplicate yourself at will?
-</prompt>
-<submit>
-- Identity crisis - each copy thinks it's the "real" you, leading to existential confusion and internal conflict
+<prompt>What are the psychological implications of being able to duplicate yourself at will?</prompt>
+<submit>- Identity crisis - each copy thinks it's the "real" you, leading to existential confusion and internal conflict
 - Relationship breakdown - others can't trust which version they're dealing with, destroying intimacy and connection  
 - Decision paralysis - why choose anything when you can duplicate and try every option simultaneously
 - Memory fragmentation - copies accumulate different experiences, making unified sense of self impossible
 - Loss of consequences - no stakes in life choices since you can always make another copy to try again
 - Stagnated growth - personal development requires learning from mistakes, but duplication removes the weight of failure
-- God complex or worthlessness - either feeling omnipotent or completely replaceable and meaningless
-</submit>
+- God complex or worthlessness - either feeling omnipotent or completely replaceable and meaningless</submit>
 </session>
