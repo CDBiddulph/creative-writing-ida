@@ -79,13 +79,13 @@ class SessionProcessor:
             session_xml = self._generate_with_retry(
                 lambda: self.xml_generator.generate_parent(prompt), is_leaf=False
             )
-            return self._continue_parent_node(node, initial_xml=session_xml)
+            return self._continue_parent_node(node, xml=session_xml)
         except Exception as e:
             logging.error(f"Error processing node {node.session_id}: {e}")
             node.session_xml = "FAILED"
             return node
 
-    def _continue_parent_node(self, node: TreeNode, initial_xml: str) -> TreeNode:
+    def _continue_parent_node(self, node: TreeNode, xml: str) -> TreeNode:
         """
         Continue a partially generated parent node by handling asks and responses incrementally.
 
@@ -93,32 +93,36 @@ class SessionProcessor:
 
         Args:
             node: The TreeNode being processed
-            initial_xml: Initial XML from generate_parent
+            xml: Initial XML from generate_parent or continue_parent
 
         Returns:
             TreeNode: Updated node with children and final XML
         """
-        # We should already know that this is valid, this just gets is_partial.
-        is_partial = self.xml_validator.get_is_xml_partial_or_fail(
-            initial_xml, is_leaf=False
-        )
+        while True:
+            # Check if current XML is complete
+            is_partial = self.xml_validator.get_is_xml_partial_or_fail(
+                xml, is_leaf=False
+            )
 
-        # If complete, return the node now.
-        if not is_partial:
-            node.session_xml = initial_xml
-            return node
+            # If complete, return the node now
+            if not is_partial:
+                node.session_xml = xml
+                return node
 
-        # Extract the last ask text
-        last_ask_text = self._extract_last_ask_text(initial_xml)
-        new_child_node = self._process_new_node(last_ask_text, node.depth + 1)
-        node.children.append(new_child_node)
+            # Extract the last ask text and create child
+            last_ask_text = self._extract_last_ask_text(xml)
+            new_child_node = self._process_new_node(last_ask_text, node.depth + 1)
+            node.children.append(new_child_node)
 
-        child_response = self._extract_response_from_child(new_child_node)
-        # Generate the next part of the XML
-        xml_with_response = self._add_response_to_xml(initial_xml, child_response)
+            # Get response from child and add to XML
+            child_response = self._extract_response_from_child(new_child_node)
+            xml_with_response = self._add_response_to_xml(xml, child_response)
 
-        # Recursively continue building the node
-        return self._continue_parent_node(node, initial_xml=xml_with_response)
+            # Call continue_parent to get the next part of the XML
+            xml = self._generate_with_retry(
+                lambda: self.xml_generator.continue_parent(xml_with_response),
+                is_leaf=False,
+            )
 
     def _generate_with_retry(self, generate_func, is_leaf: bool) -> str:
         """
@@ -134,22 +138,25 @@ class SessionProcessor:
         Raises:
             RuntimeError: If the XML is invalid after max retries.
         """
-        e = None
-        for _ in range(self.max_retries + 1):
+        last_exception = None
+        for attempt in range(self.max_retries + 1):
             try:
                 xml_content = generate_func()
-                # Don't use the result for now, we'll check it later
+                # Validate the XML
                 _ = self.xml_validator.get_is_xml_partial_or_fail(
                     xml_content, is_leaf=is_leaf
                 )
                 return xml_content
             except Exception as e:
-                logging.warning(f"Invalid XML: {xml_content}. Error: {e}")
+                last_exception = e
+                logging.warning(
+                    f"Attempt {attempt + 1} failed. Invalid XML generated. Error: {e}"
+                )
 
-        logging.error(f"Failed to generate XML after {self.max_retries} attempts")
-        if e is None:
+        logging.error(f"Failed to generate XML after {self.max_retries + 1} attempts")
+        if last_exception is None:
             raise RuntimeError(f"Error message not set. This should never happen.")
-        raise e
+        raise last_exception
 
     def _extract_last_ask_text(self, xml_content: str) -> str:
         """Extract the text content of the last ask tag."""

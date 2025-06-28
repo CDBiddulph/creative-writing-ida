@@ -513,7 +513,8 @@ These transcripts can be found in `transcripts.xml`."""
 <prompt>Write a story</prompt>
 <notes>Need help</notes>
 <ask>What genre?</ask>
-<response>Science fiction</response>"""
+<response>Science fiction</response>
+<"""
 
         mock_client.messages.create.assert_called_once_with(
             messages=[
