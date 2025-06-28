@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.main",
+            "console": "integratedTerminal",
+            "args": [
+                "--model=haiku",
+                "--max-depth=2",
+                "--temperature=0.7",
+                "--max-tokens=1000",
+                "--leaf-readme-path=prompts/fiction_leaf_readme.md",
+                "--parent-readme-path=prompts/fiction_parent_readme.md",
+                "--prompt=Write a story about pillows.",
+                "--parent-examples-xml-path=examples/fiction_parent_examples.xml",
+                "--leaf-examples-xml-path=examples/fiction_leaf_examples.xml"
+            ]
+        }
+    ]
+}
