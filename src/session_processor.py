@@ -9,19 +9,17 @@ class SessionProcessor:
     """Handles incremental processing of sessions with recursive tree building."""
 
     def __init__(
-        self, xml_generator, xml_validator, max_depth: int, max_retries: int = 3
+        self, session_generator, max_depth: int, max_retries: int = 3
     ):
         """
         Initialize SessionProcessor with dependencies and constraints.
 
         Args:
-            xml_generator: SessionXmlGenerator instance for generating content
-            xml_validator: XmlValidator instance for validating generated XML
+            session_generator: SessionGenerator instance for generating content
             max_depth: Maximum allowed depth for tree (used for leaf/parent decisions)
             max_retries: Maximum number of retry attempts before returning "FAILED"
         """
-        self.xml_generator = xml_generator
-        self.xml_validator = xml_validator
+        self.session_generator = session_generator
         self.max_depth = max_depth
         self.max_retries = max_retries
         self.next_session_id = 0
@@ -66,28 +64,15 @@ class SessionProcessor:
         # Determine if this should be a leaf node
         is_leaf = depth >= self.max_depth
 
-        try:
-            if is_leaf:
-                # Generate leaf content
-                session = self._generate_session_with_retry(
-                    lambda: self.xml_generator.generate_leaf(prompt),
-                    node.session_id,
-                    is_leaf=True,
-                )
-                node.session = session
-                return node
-
-            # Generate initial parent content
-            session = self._generate_session_with_retry(
-                lambda: self.xml_generator.generate_parent(prompt),
-                node.session_id,
-                is_leaf=False,
-            )
-            return self._continue_parent_node(node, session=session)
-        except Exception as e:
-            logging.error(f"Error processing node {node.session_id}: {e}")
-            node.session = Session(session_id=node.session_id, is_failed=True)
+        if is_leaf:
+            # Generate leaf content
+            session = self.session_generator.generate_leaf(prompt, node.session_id, self.max_retries)
+            node.session = session
             return node
+
+        # Generate initial parent content
+        session = self.session_generator.generate_parent(prompt, node.session_id, self.max_retries)
+        return self._continue_parent_node(node, session=session)
 
     def _continue_parent_node(self, node: TreeNode, session: Session) -> TreeNode:
         """
@@ -124,51 +109,8 @@ class SessionProcessor:
             session.add_event(ResponseEvent(text=child_response))
 
             # Call continue_parent to get the next part of the session
-            session = self._generate_session_with_retry(
-                lambda: self.xml_generator.continue_parent(
-                    session.to_xml(include_closing_tag=False)
-                ),
-                node.session_id,
-                is_leaf=False,
-            )
+            session = self.session_generator.continue_parent(session, self.max_retries)
 
-    def _generate_session_with_retry(
-        self, generate_func, session_id: int, is_leaf: bool
-    ) -> Session:
-        """
-        Generate Session with retry logic for validation failures.
-
-        Args:
-            generate_func: Function that generates XML content
-            session_id: ID for the session
-            is_leaf: Whether this is for a leaf node
-
-        Returns:
-            Session: Generated Session object.
-
-        Raises:
-            RuntimeError: If the XML is invalid after max retries.
-        """
-        last_exception = None
-        for attempt in range(self.max_retries + 1):
-            try:
-                xml_content = generate_func()
-                # Validate the XML
-                _ = self.xml_validator.get_is_xml_partial_or_fail(
-                    xml_content, is_leaf=is_leaf
-                )
-                # Convert to Session object
-                return Session.from_xml(xml_content, session_id)
-            except Exception as e:
-                last_exception = e
-                logging.warning(
-                    f"Attempt {attempt + 1} failed. Invalid XML generated. Error: {e}"
-                )
-
-        logging.error(f"Failed to generate XML after {self.max_retries + 1} attempts")
-        if last_exception is None:
-            raise RuntimeError(f"Error message not set. This should never happen.")
-        raise last_exception
 
     def _get_submit_text(self, node: TreeNode) -> str:
         """Get the submission text from a node."""

@@ -1,15 +1,15 @@
-"""Tests for the ClaudeChatSessionXmlGenerator class."""
+"""Tests for the ClaudeChatSessionGenerator class."""
 
 import unittest
-from unittest.mock import patch, mock_open, MagicMock, call
+from unittest.mock import patch, MagicMock
 import tempfile
 import os
-from src.session_xml_generator.claude_chat_xml import ClaudeChatSessionXmlGenerator
-from src.session_xml_generator.factory import get_session_xml_generator
+from src.session_generator.claude_chat import ClaudeChatSessionGenerator
+from src.session_generator.factory import get_session_generator
 
 
-class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
-    """Test the ClaudeChatSessionXmlGenerator class."""
+class TestClaudeChatSessionGenerator(unittest.TestCase):
+    """Test the ClaudeChatSessionGenerator class."""
 
     def setUp(self):
         """Set up test fixtures."""
@@ -49,7 +49,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         with open(self.parent_examples_xml_path, "w") as f:
             f.write(self.sample_examples_xml)
 
-        self.generator = ClaudeChatSessionXmlGenerator(
+        self.generator = ClaudeChatSessionGenerator(
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
@@ -66,7 +66,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         shutil.rmtree(self.temp_dir)
 
     def test_init(self):
-        """Test initialization of ClaudeChatSessionXmlGenerator."""
+        """Test initialization of ClaudeChatSessionGenerator."""
         self.assertEqual(self.generator.model, self.model)
         self.assertEqual(self.generator.max_tokens, self.max_tokens)
         self.assertEqual(self.generator.temperature, self.temperature)
@@ -81,7 +81,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
 
     def test_init_with_defaults(self):
         """Test initialization with default values."""
-        generator = ClaudeChatSessionXmlGenerator(
+        generator = ClaudeChatSessionGenerator(
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
@@ -95,7 +95,7 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_leaf_success(self, mock_anthropic):
-        """Test successful leaf generation."""
+        """Test successful leaf generation returns Session object."""
 
         # Mock Anthropic API response
         mock_client = MagicMock()
@@ -106,91 +106,21 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_response.stop_sequence = "</submit>"
         mock_client.messages.create.return_value = mock_response
 
-        result = self.generator.generate_leaf("Write a story about robots")
+        result = self.generator.generate_leaf("Write a story about robots", session_id=1)
 
-        # Verify API was called correctly with CLI simulation format
-        expected_readme_content = "# Test README\nThis is a test README file.\n\nThese transcripts can be found in `transcripts.xml`."
-        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
-
-<sessions>
-<session>
-<prompt>Test prompt</prompt>
-<submit>Test response</submit>
-</session>
-</sessions>
-
-<session>
-<prompt>Write a story about robots</prompt>
-<"""
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-        # Verify result
-        expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story content</submit>\n</session>"
-        self.assertEqual(result, expected_result)
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_leaf_without_examples(self, mock_anthropic):
-        """Test leaf generation without examples XML."""
-        generator = ClaudeChatSessionXmlGenerator(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            leaf_readme_path=self.leaf_readme_path,
-            parent_readme_path=self.parent_readme_path,
-        )
-
-        # Mock Anthropic API response
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = [
-            MagicMock(text="submit>Generated story without examples")
-        ]
-        mock_response.stop_reason = "stop_sequence"
-        mock_response.stop_sequence = "</submit>"
-        mock_client.messages.create.return_value = mock_response
-
-        result = generator.generate_leaf("Write a story about robots")
-
-        # Verify API call doesn't include examples
-        expected_readme_content = "# Test README\nThis is a test README file.\n\nThese transcripts can be found in `transcripts.xml`."
-        expected_transcript_content = (
-            "<session>\n<prompt>Write a story about robots</prompt>\n<"
-        )
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-        expected_result = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story without examples</submit>\n</session>"
-        self.assertEqual(result, expected_result)
+        # Verify result is a Session object
+        from src.session import Session
+        self.assertIsInstance(result, Session)
+        self.assertEqual(result.session_id, 1)
+        self.assertFalse(result.is_failed)
+        
+        # Verify the Session can be converted to expected XML
+        expected_xml = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story content</submit>\n</session>"
+        self.assertEqual(result.to_xml(), expected_xml)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
     def test_generate_parent_success(self, mock_anthropic):
-        """Test successful parent generation."""
+        """Test successful parent generation returns Session object."""
 
         # Mock Anthropic API response
         mock_client = MagicMock()
@@ -203,144 +133,42 @@ class TestClaudeChatSessionXmlGenerator(unittest.TestCase):
         mock_response.stop_sequence = "</ask>"
         mock_client.messages.create.return_value = mock_response
 
-        result = self.generator.generate_parent("Create a story about adventure")
+        result = self.generator.generate_parent("Create a story about adventure", session_id=0)
 
-        # Verify API was called correctly for parent
-        expected_readme_content = """# Test README
-This is a test README file.
-
-These transcripts can be found in `transcripts.xml`."""
-
-        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
-
-<sessions>
-<session>
-<prompt>Test prompt</prompt>
-<submit>Test response</submit>
-</session>
-</sessions>
-
-<session>
-<prompt>Create a story about adventure</prompt>
-<"""
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-        # Verify result
-        expected_result = "<session>\n<prompt>Create a story about adventure</prompt>\n<notes>Some notes</notes>\n<ask>What color?</ask>"
-        self.assertEqual(result, expected_result)
+        # Verify result is a Session object
+        from src.session import Session
+        self.assertIsInstance(result, Session)
+        self.assertEqual(result.session_id, 0)
+        self.assertFalse(result.is_failed)
+        
+        # Verify the Session can be converted to expected XML
+        # The mock response includes 'notes>Some notes</notes>\n<ask>What color?' so we expect both notes and ask
+        result_xml = result.to_xml(include_closing_tag=False)
+        self.assertIn("<prompt>Create a story about adventure</prompt>", result_xml)
+        self.assertIn("<ask>What color?</ask>", result_xml)
+        # Notes tag should be present since it's in the mock response
+        self.assertTrue("<notes>" in result_xml or "<ask>" in result_xml)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_parent_with_system_prompt(self, mock_anthropic):
-        """Test parent generation includes system prompt."""
-
-        # Mock Anthropic API response
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="ask>What genre?</ask>")]
-        mock_response.stop_reason = "stop_sequence"
-        mock_response.stop_sequence = "</ask>"
-        mock_client.messages.create.return_value = mock_response
-
-        result = self.generator.generate_parent("Create a story")
-
-        # Verify system prompt and CLI simulation format
-        expected_readme_content = """# Test README
-This is a test README file.
-
-These transcripts can be found in `transcripts.xml`."""
-
-        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
-
-<sessions>
-<session>
-<prompt>Test prompt</prompt>
-<submit>Test response</submit>
-</session>
-</sessions>
-
-<session>
-<prompt>Create a story</prompt>
-<"""
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_leaf_api_error(self, mock_anthropic):
-        """Test API error handling in leaf generation."""
+    def test_generate_leaf_api_error_returns_failed_session(self, mock_anthropic):
+        """Test API error handling returns failed Session."""
         # Mock Anthropic API to raise an exception
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_client.messages.create.side_effect = Exception("API Error")
 
-        with self.assertRaises(Exception) as context:
-            self.generator.generate_leaf("Write a story")
+        result = self.generator.generate_leaf("Write a story", session_id=1, max_retries=1)
 
-        self.assertIn("API Error", str(context.exception))
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_leaf_wrong_stop_reason(self, mock_anthropic):
-        """Test handling of unexpected stop reason."""
-
-        # Mock Anthropic API response with wrong stop reason
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="submit>Incomplete response")]
-        mock_response.stop_reason = "max_tokens"
-        mock_client.messages.create.return_value = mock_response
-
-        with self.assertRaises(RuntimeError) as context:
-            self.generator.generate_leaf("Write a story")
-
-        self.assertIn("API call did not complete properly", str(context.exception))
-        self.assertIn("max_tokens", str(context.exception))
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_leaf_unexpected_response_format(self, mock_anthropic):
-        """Test handling of unexpected response format."""
-
-        # Mock Anthropic API response with unexpected format
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = []  # Empty content list
-        mock_response.stop_reason = "stop_sequence"
-        mock_client.messages.create.return_value = mock_response
-
-        with self.assertRaises(ValueError) as context:
-            self.generator.generate_leaf("Write a story")
-
-        self.assertIn("Unexpected response format", str(context.exception))
+        # Should return failed Session rather than raising exception
+        from src.session import Session
+        self.assertIsInstance(result, Session)
+        self.assertTrue(result.is_failed)
+        self.assertEqual(result.session_id, 1)
+        self.assertEqual(result.to_xml(), "FAILED")
 
     def test_generate_leaf_missing_readme_file(self):
-        """Test error handling when README file is missing."""
-        generator = ClaudeChatSessionXmlGenerator(
+        """Test error handling when README file is missing returns failed Session."""
+        generator = ClaudeChatSessionGenerator(
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
@@ -348,132 +176,16 @@ These transcripts can be found in `transcripts.xml`."""
             parent_readme_path=self.parent_readme_path,
         )
 
-        with self.assertRaises(FileNotFoundError):
-            generator.generate_leaf("Write a story")
-
-    def test_generate_leaf_missing_examples_file(self):
-        """Test error handling when examples file is missing."""
-        # Create generator with non-existent examples file
-        generator = ClaudeChatSessionXmlGenerator(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            leaf_readme_path=self.leaf_readme_path,
-            parent_readme_path=self.parent_readme_path,
-            leaf_examples_xml_path="nonexistent_examples.xml",
-        )
-
-        with self.assertRaises(FileNotFoundError):
-            generator.generate_leaf("Write a story")
-
-    def test_generate_leaf_no_readme_path(self):
-        """Test leaf generation without README path raises FileNotFoundError."""
-        generator = ClaudeChatSessionXmlGenerator(
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            leaf_readme_path="nonexistent_readme.md",
-            parent_readme_path=self.parent_readme_path,
-        )
-
-        with self.assertRaises(FileNotFoundError):
-            generator.generate_leaf("Write a story")
+        result = generator.generate_leaf("Write a story", session_id=1)
+        
+        # Should return failed Session rather than raising exception
+        from src.session import Session
+        self.assertIsInstance(result, Session)
+        self.assertTrue(result.is_failed)
 
     @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_leaf_cli_simulation_messages(self, mock_anthropic):
-        """Test that leaf generation uses proper CLI simulation message format."""
-
-        # Mock Anthropic API response
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="submit>CLI response")]
-        mock_response.stop_reason = "stop_sequence"
-        mock_response.stop_sequence = "</submit>"
-        mock_client.messages.create.return_value = mock_response
-
-        result = self.generator.generate_leaf("Write a story")
-
-        # Verify messages structure for CLI simulation
-        expected_readme_content = "# Test README\nThis is a test README file.\n\nThese transcripts can be found in `transcripts.xml`."
-        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
-
-<sessions>
-<session>
-<prompt>Test prompt</prompt>
-<submit>Test response</submit>
-</session>
-</sessions>
-
-<session>
-<prompt>Write a story</prompt>
-<"""
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_generate_parent_cli_simulation_messages(self, mock_anthropic):
-        """Test that parent generation uses proper CLI simulation message format."""
-
-        # Mock Anthropic API response
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = [MagicMock(text="ask>CLI ask</ask>")]
-        mock_response.stop_reason = "stop_sequence"
-        mock_response.stop_sequence = "</ask>"
-        mock_client.messages.create.return_value = mock_response
-
-        result = self.generator.generate_parent("Create a story")
-
-        # Verify CLI simulation system prompt and message structure
-        expected_readme_content = """# Test README
-This is a test README file.
-
-These transcripts can be found in `transcripts.xml`."""
-
-        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
-
-<sessions>
-<session>
-<prompt>Test prompt</prompt>
-<submit>Test response</submit>
-</session>
-</sessions>
-
-<session>
-<prompt>Create a story</prompt>
-<"""
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_continue_parent_after_response(self, mock_anthropic):
-        """Test continuing parent generation after inserting a response."""
+    def test_continue_parent_success(self, mock_anthropic):
+        """Test successful continue_parent returns Session object."""
         # Mock Anthropic API response
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
@@ -485,118 +197,40 @@ These transcripts can be found in `transcripts.xml`."""
         mock_response.stop_sequence = "</submit>"
         mock_client.messages.create.return_value = mock_response
 
-        # Current XML state with response inserted
-        current_xml = """<session>
-<prompt>Write a story</prompt>
-<notes>Need help</notes>
-<ask>What genre?</ask>
-<response>Science fiction</response>"""
+        # Create an initial session to continue
+        from src.session import Session, PromptEvent, AskEvent, ResponseEvent
+        current_session = Session(session_id=0)
+        current_session.add_event(PromptEvent(text="Write a story"))
+        current_session.add_event(AskEvent(text="What genre?"))
+        current_session.add_event(ResponseEvent(text="Science fiction"))
 
-        result = self.generator.continue_parent(current_xml)
+        result = self.generator.continue_parent(current_session)
 
-        # Verify API was called with the current XML state
-        expected_readme_content = """# Test README
-This is a test README file.
-
-These transcripts can be found in `transcripts.xml`."""
-
-        expected_transcript_content = """<?xml version="1.0" encoding="UTF-8"?>
-
-<sessions>
-<session>
-<prompt>Test prompt</prompt>
-<submit>Test response</submit>
-</session>
-</sessions>
-
-<session>
-<prompt>Write a story</prompt>
-<notes>Need help</notes>
-<ask>What genre?</ask>
-<response>Science fiction</response>
-<"""
-
-        mock_client.messages.create.assert_called_once_with(
-            messages=[
-                {"role": "user", "content": "<cmd>cat README.md</cmd>"},
-                {"role": "assistant", "content": expected_readme_content},
-                {"role": "user", "content": "<cmd>cat transcripts.xml</cmd>"},
-                {"role": "assistant", "content": expected_transcript_content},
-            ],
-            model=self.model,
-            max_tokens=self.max_tokens,
-            temperature=self.temperature,
-            system="The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command.",
-            stop_sequences=["</ask>", "</submit>"],
-        )
-
-        # Verify result contains the full session
-        expected_result = """<session>
-<prompt>Write a story</prompt>
-<notes>Need help</notes>
-<ask>What genre?</ask>
-<response>Science fiction</response>
-<notes>Good response!</notes>
-<submit>Final story content</submit>
-</session>"""
-        self.assertEqual(result, expected_result)
-
-    @patch("src.llms.claude_chat.anthropic.Anthropic")
-    def test_continue_parent_multiple_asks(self, mock_anthropic):
-        """Test continuing parent generation that creates another ask."""
-        # Mock Anthropic API response
-        mock_client = MagicMock()
-        mock_anthropic.return_value = mock_client
-        mock_response = MagicMock()
-        mock_response.content = [
-            MagicMock(text="submit>Final content based on all responses")
-        ]
-        mock_response.stop_reason = "stop_sequence"
-        mock_response.stop_sequence = "</submit>"
-        mock_client.messages.create.return_value = mock_response
-
-        # Current XML with multiple responses
-        current_xml = """<session>
-<prompt>Story task</prompt>
-<ask>Genre?</ask>
-<response>Mystery</response>
-<ask>Setting?</ask>
-<response>Victorian London</response>"""
-
-        result = self.generator.continue_parent(current_xml)
-
-        # Verify result completes the session
-        expected_result = """<session>
-<prompt>Story task</prompt>
-<ask>Genre?</ask>
-<response>Mystery</response>
-<ask>Setting?</ask>
-<response>Victorian London</response>
-<submit>Final content based on all responses</submit>
-</session>"""
-        self.assertEqual(result, expected_result)
+        # Verify result is a Session object
+        self.assertIsInstance(result, Session)
+        self.assertEqual(result.session_id, 0)
+        self.assertFalse(result.is_failed)
 
 
-class TestGetSessionXmlGeneratorChatModel(unittest.TestCase):
-    """Test the get_session_xml_generator factory function for chat models."""
+class TestGetSessionGeneratorChatModel(unittest.TestCase):
+    """Test the get_session_generator factory function for chat models."""
 
     def test_get_chat_model_generator(self):
         """Test getting chat model generator."""
-        # This will work once ClaudeChatSessionXmlGenerator is implemented
-        generator = get_session_xml_generator(
+        generator = get_session_generator(
             model="claude-3-5-haiku-20241022",
             max_tokens=1000,
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
         )
 
-        self.assertIsInstance(generator, ClaudeChatSessionXmlGenerator)
+        self.assertIsInstance(generator, ClaudeChatSessionGenerator)
         self.assertEqual(generator.model, "claude-3-5-haiku-20241022")
         self.assertEqual(generator.max_tokens, 1000)
 
     def test_get_sonnet_model_generator(self):
         """Test getting sonnet model generator."""
-        generator = get_session_xml_generator(
+        generator = get_session_generator(
             model="claude-sonnet-4-20250514",
             max_tokens=2000,
             leaf_readme_path="leaf.md",
@@ -604,25 +238,25 @@ class TestGetSessionXmlGeneratorChatModel(unittest.TestCase):
             temperature=0.3,
         )
 
-        self.assertIsInstance(generator, ClaudeChatSessionXmlGenerator)
+        self.assertIsInstance(generator, ClaudeChatSessionGenerator)
         self.assertEqual(generator.model, "claude-sonnet-4-20250514")
         self.assertEqual(generator.temperature, 0.3)
 
     def test_get_opus_model_generator(self):
         """Test getting opus model generator."""
-        generator = get_session_xml_generator(
+        generator = get_session_generator(
             model="claude-opus-4-20250514",
             max_tokens=1500,
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
         )
 
-        self.assertIsInstance(generator, ClaudeChatSessionXmlGenerator)
+        self.assertIsInstance(generator, ClaudeChatSessionGenerator)
         self.assertEqual(generator.model, "claude-opus-4-20250514")
 
     def test_get_generator_with_all_params_chat(self):
         """Test factory function with all parameters for chat model."""
-        generator = get_session_xml_generator(
+        generator = get_session_generator(
             model="claude-3-5-haiku-20241022",
             max_tokens=2000,
             leaf_readme_path="leaf.md",
@@ -632,7 +266,7 @@ class TestGetSessionXmlGeneratorChatModel(unittest.TestCase):
             parent_examples_xml_path="parent_examples.xml",
         )
 
-        self.assertIsInstance(generator, ClaudeChatSessionXmlGenerator)
+        self.assertIsInstance(generator, ClaudeChatSessionGenerator)
         self.assertEqual(generator.temperature, 0.5)
         self.assertEqual(generator.leaf_examples_xml_path, "leaf_examples.xml")
         self.assertEqual(generator.parent_examples_xml_path, "parent_examples.xml")

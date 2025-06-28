@@ -1,12 +1,12 @@
-"""Factory function for creating session XML generators."""
+"""Factory function for creating session generators."""
 
 from src.config import resolve_model_name, resolve_model_type
-from src.session_xml_generator.claude_base_xml import ClaudeBaseSessionXmlGenerator
-from src.session_xml_generator.claude_chat_xml import ClaudeChatSessionXmlGenerator
-from src.session_xml_generator.session_xml_generator import SessionXmlGenerator
+from src.session_generator.claude_base import ClaudeBaseSessionGenerator
+from src.session_generator.claude_chat import ClaudeChatSessionGenerator
+from src.session_generator.session_generator import SessionGenerator
 
 
-def get_session_xml_generator(
+def get_session_generator(
     model: str,
     max_tokens: int,
     leaf_readme_path: str,
@@ -14,7 +14,7 @@ def get_session_xml_generator(
     temperature: float = 0.7,
     leaf_examples_xml_path: str = None,
     parent_examples_xml_path: str = None,
-) -> SessionXmlGenerator:
+) -> SessionGenerator:
     """
     Get the appropriate API interface based on mode.
 
@@ -33,7 +33,7 @@ def get_session_xml_generator(
     model = resolve_model_name(model)
     model_type = resolve_model_type(model)
     if model_type == "base":
-        return ClaudeBaseSessionXmlGenerator(
+        return ClaudeBaseSessionGenerator(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -43,7 +43,7 @@ def get_session_xml_generator(
             parent_examples_xml_path=parent_examples_xml_path,
         )
     elif model_type == "chat":
-        return ClaudeChatSessionXmlGenerator(
+        return ClaudeChatSessionGenerator(
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,

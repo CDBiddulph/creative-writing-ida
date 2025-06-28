@@ -2,7 +2,7 @@
 
 import argparse
 from dataclasses import dataclass
-from .session_xml_generator.factory import get_session_xml_generator
+from .session_generator.factory import get_session_generator
 
 
 @dataclass
@@ -88,7 +88,7 @@ def create_session_generator(config: TreeRunnerConfig):
         
     Uses the existing factory to map model names to generator types.
     """
-    return get_session_xml_generator(
+    return get_session_generator(
         model=config.model,
         max_tokens=config.max_tokens,
         leaf_readme_path=config.leaf_readme_path,

@@ -1,12 +1,13 @@
 """Interface for different API implementations (Claude or Human)."""
 
 from abc import ABC, abstractmethod
+from ..session import Session
 
 
-class SessionXmlGenerator(ABC):
-    """Abstract interface for generating sessions in XML format.
+class SessionGenerator(ABC):
+    """Abstract interface for generating sessions.
 
-    Given a prompt and existing files for the LLM to use, generate a complete XML file.
+    Given a prompt and existing files for the LLM to use, generate a complete Session.
 
     Args:
         model: Model name
@@ -39,18 +40,18 @@ class SessionXmlGenerator(ABC):
         self.parent_examples_xml_path = parent_examples_xml_path
 
     @abstractmethod
-    def generate_leaf(self, prompt: str) -> str:
+    def generate_leaf(self, prompt: str, session_id: int, max_retries: int = 3) -> Session:
         """Generate a leaf session."""
         pass
 
     @abstractmethod
-    def generate_parent(self, prompt: str) -> str:
+    def generate_parent(self, prompt: str, session_id: int, max_retries: int = 3) -> Session:
         """Generate a parent session."""
         pass
 
     @abstractmethod
-    def continue_parent(self, current_xml: str) -> str:
-        """Continue generating a parent session from existing XML."""
+    def continue_parent(self, current_session: Session, max_retries: int = 3) -> Session:
+        """Continue generating a parent session from existing Session."""
         pass
 
     def _load_readme_content(self, readme_path: str) -> str:

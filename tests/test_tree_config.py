@@ -194,7 +194,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir)
 
-    @patch('src.tree_config.get_session_xml_generator')
+    @patch('src.tree_config.get_session_generator')
     def test_create_session_generator_base_model(self, mock_factory):
         """Test creating generator for base model."""
         mock_generator = Mock()
@@ -213,7 +213,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
         )
         self.assertEqual(result, mock_generator)
 
-    @patch('src.tree_config.get_session_xml_generator')
+    @patch('src.tree_config.get_session_generator')
     def test_create_session_generator_chat_model(self, mock_factory):
         """Test creating generator for chat model."""
         self.config.model = "claude-3-5-haiku-20241022"
@@ -232,7 +232,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
             parent_examples_xml_path=None
         )
 
-    @patch('src.tree_config.get_session_xml_generator')
+    @patch('src.tree_config.get_session_generator')
     def test_create_session_generator_with_examples(self, mock_factory):
         """Test creating generator with example paths."""
         self.config.leaf_examples_xml_path = "examples/leaf.xml"
@@ -248,7 +248,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
         self.assertEqual(call_args['leaf_examples_xml_path'], "examples/leaf.xml")
         self.assertEqual(call_args['parent_examples_xml_path'], "examples/parent.xml")
 
-    @patch('src.tree_config.get_session_xml_generator')
+    @patch('src.tree_config.get_session_generator')
     def test_create_session_generator_factory_error(self, mock_factory):
         """Test handling of factory errors."""
         mock_factory.side_effect = ValueError("Unknown model")
@@ -272,7 +272,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
         
         # The function should handle non-existent files gracefully
         # (validation might happen later in the pipeline)
-        with patch('src.tree_config.get_session_xml_generator') as mock_factory:
+        with patch('src.tree_config.get_session_generator') as mock_factory:
             mock_factory.return_value = Mock()
             result = create_session_generator(invalid_config)
             self.assertIsNotNone(result)
