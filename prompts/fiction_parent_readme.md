@@ -24,4 +24,9 @@ Each transcript is structured as an XML-like document capturing the step-by-step
 
 All transcripts start with a `<prompt>` and end with a `<submit>`. Authors were asked to type up `<notes>` to convey their thinking process, but it is possible for the author to move directly from `<prompt>` to `<ask>` without writing `<notes>` first.
 
-The writers further down the tree do not see the author's entire context - they only see whatever is enclosed in `<ask>` tags. This means that you will often see information duplicated from previous tags. A common pattern was to start by simply copying the exact text in `<prompt>` into `<ask>`, which results in a rough draft to use as a starting point.
+By default, the writers further down the tree do not see the author's entire context - they only see whatever is enclosed in `<ask>` tags. However, writers use placeholder variables in their `<ask>` and `<submit>` tags to reference content from earlier in the session:
+
+* `$PROMPT` - References the original prompt text
+* `$RESPONSE1`, `$RESPONSE2`, etc. - References the responses from delegated participants in order (1-indexed)
+
+These placeholders are replaced with the actual text when the content is passed down the tree. This allows writers to efficiently reference and build upon earlier contributions without manually copying text. For example, a writer might ask "Please expand on the following idea: $RESPONSE1" to ask for elaboration on a response they received previously.

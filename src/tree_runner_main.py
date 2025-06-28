@@ -1,7 +1,7 @@
 """Main entry point for the tree generation system."""
 
 import logging
-from .tree_config import parse_args
+from .tree_runner_config import parse_args
 from .tree_runner import TreeRunner
 
 

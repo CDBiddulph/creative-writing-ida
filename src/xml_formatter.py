@@ -1,11 +1,35 @@
 """Handles XML manipulation and formatting for final output."""
 
+import io
 import xml.etree.ElementTree as ET
 from .tree_node import TreeNode
+from .placeholder_replacer import PlaceholderReplacer
 
 
 class XmlFormatter:
     """Handles XML manipulation and formatting for final output."""
+
+    def __init__(self):
+        """Initialize XmlFormatter."""
+        self.placeholder_replacer = PlaceholderReplacer()
+
+    def _add_final_response(self, root_node: TreeNode, sessions: ET.Element):
+        """Add final-response tag with resolved placeholders if root has a submit."""
+        if (
+            root_node.session
+            and root_node.session.is_complete()
+            and not root_node.session.is_failed
+        ):
+            try:
+                submit_text = root_node.session.get_submit_text()
+                resolved_text = self.placeholder_replacer.process_text(
+                    submit_text, root_node.session
+                )
+                final_response_elem = ET.SubElement(sessions, "final-response")
+                final_response_elem.text = resolved_text
+            except ValueError:
+                # No submit text found, skip final-response
+                pass
 
     def format_tree_xml(self, root_node: TreeNode) -> str:
         """
@@ -22,6 +46,9 @@ class XmlFormatter:
         """
         # Create root sessions element
         sessions = ET.Element("sessions")
+
+        # Add final-response tag with resolved placeholders if root has a submit
+        self._add_final_response(root_node, sessions)
 
         # Get all nodes in pre-order traversal
         all_nodes = root_node.traverse_preorder()
@@ -61,8 +88,6 @@ class XmlFormatter:
         self._indent(sessions)
 
         # Convert to string with custom XML declaration
-        import io
-
         output = io.StringIO()
         output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
 

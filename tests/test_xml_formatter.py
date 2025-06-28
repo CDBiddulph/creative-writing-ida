@@ -254,6 +254,138 @@ class TestXmlFormatter(unittest.TestCase):
         session_count = result.count("<session>")
         self.assertEqual(session_count, 31)
 
+    def test_format_tree_with_final_response(self):
+        """Test that final-response tag is added with resolved placeholders."""
+        root = TreeNode(session_id=0, prompt="Write about cats", depth=0)
+        child1 = TreeNode(session_id=1, prompt="Give ideas", depth=1)
+        child2 = TreeNode(session_id=2, prompt="Expand on idea", depth=1)
+        
+        # Root has placeholders in submit
+        root.session_xml = """<session>
+            <prompt>Write about cats</prompt>
+            <ask>Give ideas</ask>
+            <response>Fluffy cats playing</response>
+            <ask>Expand on idea</ask>
+            <response>Detailed cat story</response>
+            <submit>Story based on $PROMPT using $RESPONSE1 and $RESPONSE2</submit>
+        </session>"""
+        
+        child1.session_xml = """<session>
+            <prompt>Give ideas</prompt>
+            <submit>Fluffy cats playing</submit>
+        </session>"""
+        
+        child2.session_xml = """<session>
+            <prompt>Expand on idea</prompt>
+            <submit>Detailed cat story</submit>
+        </session>"""
+        
+        root.add_child(child1)
+        root.add_child(child2)
+        
+        result = self.formatter.format_tree_xml(root)
+        
+        # Should have final-response tag
+        self.assertIn("<final-response>", result)
+        self.assertIn("</final-response>", result)
+        
+        # Final response should have placeholders resolved
+        self.assertIn("Story based on Write about cats using Fluffy cats playing and Detailed cat story", result)
+        
+        # Final response should be first element after sessions tag
+        sessions_start = result.find("<sessions>")
+        final_response_start = result.find("<final-response>")
+        first_session_start = result.find("<session>")
+        self.assertLess(sessions_start, final_response_start)
+        self.assertLess(final_response_start, first_session_start)
+
+    def test_format_tree_no_final_response_for_failed(self):
+        """Test that no final-response tag is added for failed sessions."""
+        root = TreeNode(session_id=0, prompt="Test task", depth=0)
+        root.session_xml = "FAILED"
+        
+        result = self.formatter.format_tree_xml(root)
+        
+        # Should not have final-response tag
+        self.assertNotIn("<final-response>", result)
+        
+    def test_format_tree_no_final_response_for_incomplete(self):
+        """Test that no final-response tag is added for incomplete sessions."""
+        root = TreeNode(session_id=0, prompt="Test task", depth=0)
+        root.session_xml = """<session>
+            <prompt>Test task</prompt>
+            <ask>Need help</ask>
+        </session>"""
+        
+        result = self.formatter.format_tree_xml(root)
+        
+        # Should not have final-response tag
+        self.assertNotIn("<final-response>", result)
+
+    def test_format_tree_final_response_preserves_original_placeholders(self):
+        """Test that original placeholders are preserved in session XML while final-response has them resolved."""
+        root = TreeNode(session_id=0, prompt="Create a recipe", depth=0)
+        child1 = TreeNode(session_id=1, prompt="List ingredients", depth=1)
+        child2 = TreeNode(session_id=2, prompt="Describe steps", depth=1)
+        
+        # Root has placeholders throughout
+        root.session_xml = """<session>
+            <prompt>Create a recipe</prompt>
+            <ask>For $PROMPT, what ingredients should we use?</ask>
+            <response>Tomatoes, basil, mozzarella</response>
+            <ask>Using $RESPONSE1, how should we prepare this?</ask>
+            <response>Slice and layer the ingredients</response>
+            <submit>Recipe for $PROMPT: Use $RESPONSE1. Method: $RESPONSE2</submit>
+        </session>"""
+        
+        child1.session_xml = """<session>
+            <prompt>For Create a recipe, what ingredients should we use?</prompt>
+            <submit>Tomatoes, basil, mozzarella</submit>
+        </session>"""
+        
+        child2.session_xml = """<session>
+            <prompt>Using Tomatoes, basil, mozzarella, how should we prepare this?</prompt>
+            <submit>Slice and layer the ingredients</submit>
+        </session>"""
+        
+        root.add_child(child1)
+        root.add_child(child2)
+        
+        result = self.formatter.format_tree_xml(root)
+        
+        # Final response should have resolved placeholders
+        self.assertIn("<final-response>Recipe for Create a recipe: Use Tomatoes, basil, mozzarella. Method: Slice and layer the ingredients</final-response>", result)
+        
+        # Original session should still have placeholders
+        self.assertIn("<ask>For $PROMPT, what ingredients should we use?</ask>", result)
+        self.assertIn("<ask>Using $RESPONSE1, how should we prepare this?</ask>", result)
+        self.assertIn("<submit>Recipe for $PROMPT: Use $RESPONSE1. Method: $RESPONSE2</submit>", result)
+        
+        # Children should have resolved prompts (no placeholders)
+        self.assertIn("<prompt>For Create a recipe, what ingredients should we use?</prompt>", result)
+        self.assertIn("<prompt>Using Tomatoes, basil, mozzarella, how should we prepare this?</prompt>", result)
+
+    def test_format_tree_complex_placeholder_combinations(self):
+        """Test edge cases with multiple placeholders in various combinations."""
+        root = TreeNode(session_id=0, prompt="Test task", depth=0)
+        
+        # Test with multiple placeholders in one place
+        root.session_xml = """<session>
+            <prompt>Test task</prompt>
+            <ask>First ask</ask>
+            <response>First response</response>
+            <ask>Second ask</ask>
+            <response>Second response</response>
+            <ask>Third ask</ask>
+            <response>Third response</response>
+            <submit>$RESPONSE1 $RESPONSE1 and $RESPONSE2 plus $RESPONSE3 for $PROMPT</submit>
+        </session>"""
+        
+        result = self.formatter.format_tree_xml(root)
+        
+        # Should handle repeated placeholders and multiple responses
+        self.assertIn("<final-response>First response First response and Second response plus Third response for Test task</final-response>", result)
+
 
 if __name__ == "__main__":
     unittest.main()

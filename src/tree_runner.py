@@ -2,7 +2,7 @@
 
 import os
 from datetime import datetime
-from .tree_config import TreeRunnerConfig, create_session_generator
+from .tree_runner_config import TreeRunnerConfig, create_session_generator
 from .session_processor import SessionProcessor
 from .xml_formatter import XmlFormatter
 

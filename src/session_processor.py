@@ -3,6 +3,7 @@
 import logging
 from .tree_node import TreeNode
 from .session import Session, ResponseEvent
+from .placeholder_replacer import PlaceholderReplacer
 
 
 class SessionProcessor:
@@ -23,6 +24,7 @@ class SessionProcessor:
         self.max_depth = max_depth
         self.max_retries = max_retries
         self.next_session_id = 0
+        self.placeholder_replacer = PlaceholderReplacer()
 
     def process_session(self, prompt: str) -> TreeNode:
         """
@@ -45,19 +47,24 @@ class SessionProcessor:
         self.next_session_id = 0
         return self._process_new_node(prompt, 0)
 
-    def _process_new_node(self, prompt: str, depth: int) -> TreeNode:
+    def _process_new_node(self, prompt: str, depth: int, parent_session: Session = None) -> TreeNode:
         """
         Process a single node recursively.
 
         Args:
             prompt: The prompt for this node
             depth: Current depth in the tree
+            parent_session: Parent session for placeholder replacement (optional)
 
         Returns:
             TreeNode: Processed node with all children
         """
         session_id = self.next_session_id
         self.next_session_id += 1
+
+        # Replace placeholders in prompt if parent session is provided
+        if parent_session:
+            prompt = self.placeholder_replacer.process_text(prompt, parent_session)
 
         node = TreeNode(session_id=session_id, prompt=prompt, depth=depth)
 
@@ -101,7 +108,7 @@ class SessionProcessor:
                     f"Expected ask event but found none in session {session.session_id}: {e}"
                 )
 
-            new_child_node = self._process_new_node(last_ask_text, node.depth + 1)
+            new_child_node = self._process_new_node(last_ask_text, node.depth + 1, parent_session=session)
             node.children.append(new_child_node)
 
             # Get response from child and add to session
@@ -113,5 +120,7 @@ class SessionProcessor:
 
 
     def _get_submit_text(self, node: TreeNode) -> str:
-        """Get the submission text from a node."""
-        return node.session.get_submit_text()
+        """Get the submission text from a node with placeholders resolved."""
+        submit_text = node.session.get_submit_text()
+        # Resolve any placeholders in the submit text using the child's session context
+        return self.placeholder_replacer.process_text(submit_text, node.session)

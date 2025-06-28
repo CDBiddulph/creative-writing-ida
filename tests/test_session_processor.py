@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock
 from src.session_processor import SessionProcessor
 from src.tree_node import TreeNode
-from src.session import Session
+from src.session import Session, ResponseEvent
 
 
 class TestSessionProcessor(unittest.TestCase):
@@ -326,6 +326,115 @@ class TestSessionProcessor(unittest.TestCase):
 
         # Verify that continue_parent was called once (SessionGenerator handles retries internally)
         self.mock_session_generator.continue_parent.assert_called_once()
+
+    def test_placeholder_replacement_in_ask(self):
+        """Test that placeholders in ask text are replaced before processing child."""
+        # Create Session objects with placeholders
+        initial_parent_session = Session.from_xml(
+            '<session>\n<prompt>Write a story about cats</prompt>\n<ask>Based on $PROMPT, give me ideas</ask>', 0
+        )
+        
+        continued_parent_session = Session.from_xml(
+            '<session>\n<prompt>Write a story about cats</prompt>\n<ask>Based on $PROMPT, give me ideas</ask>\n<response>Fluffy cats playing</response>\n<ask>Expand on $RESPONSE1</ask>', 0
+        )
+        
+        final_parent_session = Session.from_xml(
+            '<session>\n<prompt>Write a story about cats</prompt>\n<ask>Based on $PROMPT, give me ideas</ask>\n<response>Fluffy cats playing</response>\n<ask>Expand on $RESPONSE1</ask>\n<response>A detailed story about fluffy cats</response>\n<submit>Final story combining $PROMPT with $RESPONSE1 and $RESPONSE2</submit>\n</session>', 0
+        )
+        
+        # Child sessions should receive resolved text
+        leaf_session_1 = Session.from_xml(
+            '<session>\n<prompt>Based on Write a story about cats, give me ideas</prompt>\n<submit>Fluffy cats playing</submit>\n</session>', 1
+        )
+        
+        leaf_session_2 = Session.from_xml(
+            '<session>\n<prompt>Expand on Fluffy cats playing</prompt>\n<submit>A detailed story about fluffy cats</submit>\n</session>', 2
+        )
+
+        # Set up mock returns
+        self.mock_session_generator.generate_parent.return_value = initial_parent_session
+        self.mock_session_generator.continue_parent.side_effect = [continued_parent_session, final_parent_session]
+        self.mock_session_generator.generate_leaf.side_effect = [leaf_session_1, leaf_session_2]
+
+        processor = SessionProcessor(
+            session_generator=self.mock_session_generator,
+            max_depth=1,
+            max_retries=3,
+        )
+        result = processor.process_session("Write a story about cats")
+
+        # Verify that children received resolved prompts
+        self.assertEqual(result.children[0].prompt, "Based on Write a story about cats, give me ideas")
+        self.assertEqual(result.children[1].prompt, "Expand on Fluffy cats playing")
+        
+        # Verify the generate_leaf calls received resolved text
+        leaf_calls = self.mock_session_generator.generate_leaf.call_args_list
+        self.assertEqual(leaf_calls[0][0], ("Based on Write a story about cats, give me ideas", 1, 3))
+        self.assertEqual(leaf_calls[1][0], ("Expand on Fluffy cats playing", 2, 3))
+
+    def test_nested_placeholder_resolution_in_child_submit(self):
+        """Test that placeholders in child's submit are resolved when added to parent's response."""
+        # Test scenario: Parent delegates to child, child delegates to grandchildren,
+        # and child's submit contains placeholders referencing grandchildren responses
+        
+        # Parent session starts with initial ask
+        initial_parent_session = Session.from_xml(
+            '<session>\n<prompt>Main task</prompt>\n<ask>Subtask A</ask>', 0
+        )
+        
+        # Child session that will delegate to its own children
+        child_session_initial = Session.from_xml(
+            '<session>\n<prompt>Subtask A</prompt>\n<ask>Subtask A1</ask>', 1
+        )
+        
+        # First grandchild completes immediately
+        grandchild_1 = Session.from_xml(
+            '<session>\n<prompt>Subtask A1</prompt>\n<submit>Result A1</submit>\n</session>', 2
+        )
+        
+        # Child continues after receiving first response
+        child_session_continued = Session.from_xml(
+            '<session>\n<prompt>Subtask A</prompt>\n<ask>Subtask A1</ask>\n<response>Result A1</response>\n<ask>Subtask A2 based on $RESPONSE1</ask>', 1
+        )
+        
+        # Second grandchild receives resolved prompt and completes
+        grandchild_2 = Session.from_xml(
+            '<session>\n<prompt>Subtask A2 based on Result A1</prompt>\n<submit>Result A2</submit>\n</session>', 3
+        )
+        
+        # Child completes with placeholder in submit
+        child_session_final = Session.from_xml(
+            '<session>\n<prompt>Subtask A</prompt>\n<ask>Subtask A1</ask>\n<response>Result A1</response>\n<ask>Subtask A2 based on $RESPONSE1</ask>\n<response>Result A2</response>\n<submit>$RESPONSE2</submit>\n</session>', 1
+        )
+        
+        # Parent continues and completes after receiving the resolved child response
+        continued_parent_session = Session.from_xml(
+            '<session>\n<prompt>Main task</prompt>\n<ask>Subtask A</ask>\n<response>Result A2</response>\n<submit>Final result</submit>\n</session>', 0
+        )
+
+        # Set up mock returns for nested structure
+        self.mock_session_generator.generate_parent.side_effect = [initial_parent_session, child_session_initial]
+        self.mock_session_generator.generate_leaf.side_effect = [grandchild_1, grandchild_2]
+        self.mock_session_generator.continue_parent.side_effect = [
+            child_session_continued,
+            child_session_final,
+            continued_parent_session
+        ]
+
+        processor = SessionProcessor(
+            session_generator=self.mock_session_generator,
+            max_depth=2,
+            max_retries=3,
+        )
+        result = processor.process_session("Main task")
+        
+        # Verify the parent's response contains the resolved text
+        parent_session = result.session
+        response_events = [e for e in parent_session.events if isinstance(e, ResponseEvent)]
+        
+        # The response should contain "Result A2" (the resolved value of $RESPONSE2 from the child's context)
+        self.assertEqual(response_events[0].text, "Result A2",
+                        "Child's submit placeholders should be resolved before adding to parent's response")
 
 
 if __name__ == "__main__":
