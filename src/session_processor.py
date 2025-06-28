@@ -115,7 +115,7 @@ class SessionProcessor:
             node.children.append(new_child_node)
 
             # Get response from child and add to XML
-            child_response = self._extract_response_from_child(new_child_node)
+            child_response = self._get_submit_text(new_child_node)
             xml_with_response = self._add_response_to_xml(xml, child_response)
 
             # Call continue_parent to get the next part of the XML
@@ -176,29 +176,9 @@ class SessionProcessor:
         assert result, f"No text found in {xml_to_parse}. This should never happen."
         return result
 
-    def _extract_response_from_child(self, child_node: TreeNode) -> str:
-        """Extract response text from a child node's session_xml."""
-        if child_node.session_xml == "FAILED":
-            return "FAILED"
-
-        try:
-            root = ET.fromstring(child_node.session_xml)
-        except ET.ParseError:
-            raise RuntimeError(
-                f"Failed to parse {child_node.session_xml}. This should never happen."
-            )
-
-        children = list(root)
-        assert (
-            children
-        ), f"No children found in {child_node.session_xml}. This should never happen."
-        assert (
-            children[-1].tag == "submit"
-        ), f"Last child is not a <submit>: {children[-1].tag}. This should never happen."
-        assert children[
-            -1
-        ].text, f"No submit text found in {child_node.session_xml}. This should never happen."
-        return children[-1].text
+    def _get_submit_text(self, node: TreeNode) -> str:
+        """Get the submission text from a node."""
+        return node.session.get_submit_text()
 
     def _add_response_to_xml(self, xml_content: str, response_text: str) -> str:
         """Add a response tag to the XML after the last ask."""

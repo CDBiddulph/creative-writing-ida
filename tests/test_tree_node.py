@@ -170,7 +170,9 @@ class TestTreeNode(unittest.TestCase):
         test_xml = "<session><prompt>Test</prompt><submit>Result</submit></session>"
         node.session_xml = test_xml
 
-        self.assertEqual(node.session_xml, test_xml)
+        # Should be pretty-printed
+        expected_xml = "<session>\n<prompt>Test</prompt>\n<submit>Result</submit>\n</session>"
+        self.assertEqual(node.session_xml, expected_xml)
 
     def test_tree_consistency(self):
         """Test that tree structure remains consistent after operations."""

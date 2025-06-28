@@ -2,6 +2,7 @@
 
 from typing import List, Optional
 from .xml_utils import xml_are_equivalent
+from .session import Session, FAILED_STR
 
 
 class TreeNode:
@@ -20,7 +21,7 @@ class TreeNode:
         self.prompt = prompt
         self.depth = depth
         self.children: List["TreeNode"] = []
-        self.session_xml: Optional[str] = None
+        self.session: Optional[Session] = None
 
     def add_child(self, child_node: "TreeNode"):
         """
@@ -32,6 +33,23 @@ class TreeNode:
         Maintains parent-child relationships for tree traversal.
         """
         self.children.append(child_node)
+
+    @property
+    def session_xml(self) -> Optional[str]:
+        """Get the session XML, generated from Session object."""
+        if self.session:
+            return self.session.to_xml()
+        return None
+
+    @session_xml.setter
+    def session_xml(self, value: Optional[str]) -> None:
+        """Set the session from XML string or FAILED state."""
+        if value == FAILED_STR:
+            # Create a failed session
+            self.session = Session(session_id=self.session_id, is_failed=True)
+        elif value is not None:
+            # Parse XML into Session object
+            self.session = Session.from_xml(value, self.session_id)
 
     def count_nodes(self) -> int:
         """
@@ -64,16 +82,16 @@ class TreeNode:
     def __eq__(self, other) -> bool:
         """
         Compare two TreeNode instances for equality.
-        
+
         Args:
             other: Another TreeNode to compare against
-            
+
         Returns:
             bool: True if all attributes and children are equal
         """
         if not isinstance(other, TreeNode):
             return False
-        
+
         return (
             self.session_id == other.session_id
             and self.prompt == other.prompt
