@@ -278,6 +278,37 @@ class TestSession(unittest.TestCase):
 
         self.assertEqual(session.get_submit_text(), FAILED_STR)
 
+    def test_to_xml_with_include_closing_tag(self):
+        """Test to_xml with include_closing_tag parameter."""
+        session = Session(session_id=0)
+        session.add_event(PromptEvent(text="Test"))
+        session.add_event(AskEvent(text="Question?"))
+
+        # Test with closing tag (default)
+        full_xml = session.to_xml()
+        expected_full = (
+            "<session>\n<prompt>Test</prompt>\n<ask>Question?</ask>\n</session>"
+        )
+        self.assertEqual(full_xml, expected_full)
+
+        # Test without closing tag
+        partial_xml = session.to_xml(include_closing_tag=False)
+        expected_partial = "<session>\n<prompt>Test</prompt>\n<ask>Question?</ask>"
+        self.assertEqual(partial_xml, expected_partial)
+
+    def test_copy_session(self):
+        """Test copying a session."""
+        session = Session(session_id=0)
+        session.add_event(PromptEvent(text="Test"))
+        session.add_event(AskEvent(text="Question?"))
+        session.add_event(ResponseEvent(text="Answer"))
+        session.add_event(SubmitEvent(text="Done"))
+
+        copied_session = session.copy()
+
+        self.assertEqual(copied_session.session_id, session.session_id)
+        self.assertEqual(copied_session.events, session.events)
+
 
 if __name__ == "__main__":
     unittest.main()
