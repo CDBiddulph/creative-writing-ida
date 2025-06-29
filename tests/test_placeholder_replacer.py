@@ -49,8 +49,24 @@ class TestPlaceholderReplacer(unittest.TestCase):
         }
         self.assertEqual(replacement_map, expected)
 
-    def test_replace_placeholders(self):
-        """Test replacement of placeholders in text."""
+    def test_replace_single_placeholder(self):
+        """Test replacement when text is just a single placeholder."""
+        text = "$PROMPT"
+        replacement_map = {"$PROMPT": "Write a story"}
+        
+        result = self.replacer.replace_placeholders(text, replacement_map)
+        self.assertEqual(result, "Write a story")
+        
+    def test_replace_single_placeholder_with_whitespace(self):
+        """Test single placeholder with surrounding whitespace."""
+        text = "  $RESPONSE1  "
+        replacement_map = {"$RESPONSE1": "Some response text"}
+        
+        result = self.replacer.replace_placeholders(text, replacement_map)
+        self.assertEqual(result, "Some response text")
+        
+    def test_replace_placeholders_with_context(self):
+        """Test replacement of placeholders with context naming."""
         text = "Based on $PROMPT, combine $RESPONSE1 with $RESPONSE2."
         replacement_map = {
             "$PROMPT": "Write a story",
@@ -59,20 +75,36 @@ class TestPlaceholderReplacer(unittest.TestCase):
         }
 
         result = self.replacer.replace_placeholders(text, replacement_map)
-        expected = "Based on Write a story, combine idea one with idea two."
+        expected = """CONTEXT1:
+Write a story
+
+CONTEXT2:
+idea one
+
+CONTEXT3:
+idea two
+
+Based on $CONTEXT1, combine $CONTEXT2 with $CONTEXT3."""
         self.assertEqual(result, expected)
 
     def test_replace_placeholders_with_longer_numbers(self):
-        """Test replacement handles multi-digit response numbers correctly."""
+        """Test replacement handles multi-digit response numbers correctly with context."""
         text = "$RESPONSE10 before $RESPONSE1"
         replacement_map = {"$RESPONSE1": "first", "$RESPONSE10": "tenth"}
 
         result = self.replacer.replace_placeholders(text, replacement_map)
-        expected = "tenth before first"
+        # RESPONSE1 comes before RESPONSE10 in sorted order
+        expected = """CONTEXT1:
+first
+
+CONTEXT2:
+tenth
+
+$CONTEXT2 before $CONTEXT1"""
         self.assertEqual(result, expected)
 
     def test_process_text_complete_flow(self):
-        """Test complete text processing flow."""
+        """Test complete text processing flow with context."""
         session = Session(session_id=0)
         session.add_event(PromptEvent(text="Write about cats"))
         session.add_event(AskEvent(text="Give me ideas"))
@@ -82,8 +114,26 @@ class TestPlaceholderReplacer(unittest.TestCase):
 
         text = "Combine $PROMPT with $RESPONSE1 and $RESPONSE2"
         result = self.replacer.process_text(text, session)
-        expected = "Combine Write about cats with Fluffy cats and Playful kittens"
+        expected = """CONTEXT1:
+Write about cats
+
+CONTEXT2:
+Fluffy cats
+
+CONTEXT3:
+Playful kittens
+
+Combine $CONTEXT1 with $CONTEXT2 and $CONTEXT3"""
         self.assertEqual(result, expected)
+        
+    def test_process_text_single_placeholder(self):
+        """Test processing text that is just a single placeholder."""
+        session = Session(session_id=0)
+        session.add_event(PromptEvent(text="Write about cats"))
+        
+        text = "$PROMPT"
+        result = self.replacer.process_text(text, session)
+        self.assertEqual(result, "Write about cats")
 
     def test_process_text_no_placeholders(self):
         """Test processing text without placeholders."""
@@ -101,8 +151,11 @@ class TestPlaceholderReplacer(unittest.TestCase):
 
         text = "Using $PROMPT and $RESPONSE1"
         result = self.replacer.process_text(text, session)
-        # $RESPONSE1 not in session, so it remains unchanged
-        expected = "Using Test and $RESPONSE1"
+        # Only $PROMPT is replaced with context, $RESPONSE1 remains unchanged
+        expected = """CONTEXT1:
+Test
+
+Using $CONTEXT1 and $RESPONSE1"""
         self.assertEqual(result, expected)
 
     def test_process_text_empty_input(self):

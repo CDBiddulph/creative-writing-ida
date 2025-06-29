@@ -342,13 +342,14 @@ class TestSessionProcessor(unittest.TestCase):
             '<session>\n<prompt>Write a story about cats</prompt>\n<ask>Based on $PROMPT, give me ideas</ask>\n<response>Fluffy cats playing</response>\n<ask>Expand on $RESPONSE1</ask>\n<response>A detailed story about fluffy cats</response>\n<submit>Final story combining $PROMPT with $RESPONSE1 and $RESPONSE2</submit>\n</session>', 0
         )
         
-        # Child sessions should receive resolved text
+        # Child sessions should receive resolved text with context format
         leaf_session_1 = Session.from_xml(
-            '<session>\n<prompt>Based on Write a story about cats, give me ideas</prompt>\n<submit>Fluffy cats playing</submit>\n</session>', 1
+            '<session>\n<prompt>CONTEXT1:\nWrite a story about cats\n\nBased on $CONTEXT1, give me ideas</prompt>\n<submit>Fluffy cats playing</submit>\n</session>', 1
         )
         
+        # Second ask has "Expand on $RESPONSE1", which has text + placeholder, so it gets context format
         leaf_session_2 = Session.from_xml(
-            '<session>\n<prompt>Expand on Fluffy cats playing</prompt>\n<submit>A detailed story about fluffy cats</submit>\n</session>', 2
+            '<session>\n<prompt>CONTEXT1:\nFluffy cats playing\n\nExpand on $CONTEXT1</prompt>\n<submit>A detailed story about fluffy cats</submit>\n</session>', 2
         )
 
         # Set up mock returns
@@ -364,13 +365,13 @@ class TestSessionProcessor(unittest.TestCase):
         result = processor.process_session("Write a story about cats")
 
         # Verify that children received resolved prompts
-        self.assertEqual(result.children[0].prompt, "Based on Write a story about cats, give me ideas")
-        self.assertEqual(result.children[1].prompt, "Expand on Fluffy cats playing")
+        self.assertEqual(result.children[0].prompt, "CONTEXT1:\nWrite a story about cats\n\nBased on $CONTEXT1, give me ideas")
+        self.assertEqual(result.children[1].prompt, "CONTEXT1:\nFluffy cats playing\n\nExpand on $CONTEXT1")
         
         # Verify the generate_leaf calls received resolved text
         leaf_calls = self.mock_session_generator.generate_leaf.call_args_list
-        self.assertEqual(leaf_calls[0][0], ("Based on Write a story about cats, give me ideas", 1, 3))
-        self.assertEqual(leaf_calls[1][0], ("Expand on Fluffy cats playing", 2, 3))
+        self.assertEqual(leaf_calls[0][0], ("CONTEXT1:\nWrite a story about cats\n\nBased on $CONTEXT1, give me ideas", 1, 3))
+        self.assertEqual(leaf_calls[1][0], ("CONTEXT1:\nFluffy cats playing\n\nExpand on $CONTEXT1", 2, 3))
 
     def test_nested_placeholder_resolution_in_child_submit(self):
         """Test that placeholders in child's submit are resolved when added to parent's response."""

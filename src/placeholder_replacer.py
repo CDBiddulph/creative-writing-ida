@@ -49,6 +49,9 @@ class PlaceholderReplacer:
     def replace_placeholders(self, text: str, replacement_map: Dict[str, str]) -> str:
         """Replace placeholders in text with their values.
         
+        If the text consists only of a single placeholder (e.g., just "$PROMPT"),
+        replace it with the exact content. Otherwise, use context naming.
+        
         Args:
             text: Text containing placeholders
             replacement_map: Map of placeholders to replacement values
@@ -56,17 +59,50 @@ class PlaceholderReplacer:
         Returns:
             Text with placeholders replaced
         """
-        result = text
+        # Check if text is just a single placeholder
+        stripped_text = text.strip()
+        if stripped_text in replacement_map:
+            return replacement_map[stripped_text]
         
-        # Sort placeholders by length (descending) to avoid partial replacements
-        # e.g., replace $RESPONSE10 before $RESPONSE1
-        sorted_placeholders = sorted(replacement_map.keys(), key=len, reverse=True)
+        # Otherwise, handle multiple placeholders or mixed content
+        # Extract all placeholders in the text
+        placeholders_in_text = self.extract_placeholders(text)
+        
+        # Only create context for placeholders that exist in replacement_map
+        placeholders_to_replace = [p for p in placeholders_in_text if p in replacement_map]
+        
+        if not placeholders_to_replace:
+            # No replaceable placeholders found, return original text
+            return text
+        
+        # Create context mapping
+        context_map = {}
+        context_num = 1
+        
+        # Sort placeholders to ensure consistent ordering
+        sorted_placeholders = sorted(placeholders_to_replace)
         
         for placeholder in sorted_placeholders:
-            if placeholder in replacement_map:
-                result = result.replace(placeholder, replacement_map[placeholder])
+            context_name = f"CONTEXT{context_num}"
+            context_map[placeholder] = context_name
+            context_num += 1
         
-        return result
+        # Build context section
+        context_lines = []
+        for placeholder in sorted_placeholders:
+            context_name = context_map[placeholder]
+            content = replacement_map[placeholder]
+            context_lines.append(f"{context_name}:\n{content}")
+        
+        # Replace placeholders with context names in the original text
+        result = text
+        # Sort by length descending to avoid partial replacements
+        for placeholder in sorted(context_map.keys(), key=len, reverse=True):
+            context_name = context_map[placeholder]
+            result = result.replace(placeholder, f"${context_name}")
+        
+        # Combine context definitions with the updated text
+        return "\n\n".join(context_lines) + "\n\n" + result
     
     def process_text(self, text: str, session: Session) -> str:
         """Process text to replace all placeholders.

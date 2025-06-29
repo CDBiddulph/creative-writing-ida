@@ -29,4 +29,13 @@ By default, the writers further down the tree do not see the author's entire con
 * `$PROMPT` - References the original prompt text
 * `$RESPONSE1`, `$RESPONSE2`, etc. - References the responses from delegated participants in order (1-indexed)
 
-These placeholders are replaced with the actual text when the content is passed down the tree. This allows writers to efficiently reference and build upon earlier contributions without manually copying text. For example, a writer might ask "Please expand on the following idea: $RESPONSE1" to ask for elaboration on a response they received previously.
+If only the placeholder appears in the text, then the exact content of the placeholder will be passed down the tree with no additional information. Otherwise, each placeholder will automatically be given a unique name (CONTEXT1, CONTEXT2, etc.) and listed before the prompt.
+
+This allows writers to efficiently reference and build upon earlier contributions without manually copying text. For example, a writer might ask "Please expand on $RESPONSE1" to ask for elaboration on a response they received previously. Then the collaborator further down the tree might get a prompt that looks like this:
+
+```
+CONTEXT1:
+The person who wrote this prompt got this response.
+
+Please expand on $CONTEXT1.
+```

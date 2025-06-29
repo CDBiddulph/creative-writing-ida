@@ -289,8 +289,8 @@ class TestXmlFormatter(unittest.TestCase):
         self.assertIn("<final-response>", result)
         self.assertIn("</final-response>", result)
         
-        # Final response should have placeholders resolved
-        self.assertIn("Story based on Write about cats using Fluffy cats playing and Detailed cat story", result)
+        # Final response should have placeholders resolved with context format
+        self.assertIn("Story based on $CONTEXT1 using $CONTEXT2 and $CONTEXT3", result)
         
         # Final response should be first element after sessions tag
         sessions_start = result.find("<sessions>")
@@ -353,8 +353,18 @@ class TestXmlFormatter(unittest.TestCase):
         
         result = self.formatter.format_tree_xml(root)
         
-        # Final response should have resolved placeholders
-        self.assertIn("<final-response>Recipe for Create a recipe: Use Tomatoes, basil, mozzarella. Method: Slice and layer the ingredients</final-response>", result)
+        # Final response should have resolved placeholders with context format
+        expected_final_response = """<final-response>CONTEXT1:
+Create a recipe
+
+CONTEXT2:
+Tomatoes, basil, mozzarella
+
+CONTEXT3:
+Slice and layer the ingredients
+
+Recipe for $CONTEXT1: Use $CONTEXT2. Method: $CONTEXT3</final-response>"""
+        self.assertIn(expected_final_response, result)
         
         # Original session should still have placeholders
         self.assertIn("<ask>For $PROMPT, what ingredients should we use?</ask>", result)
@@ -383,8 +393,21 @@ class TestXmlFormatter(unittest.TestCase):
         
         result = self.formatter.format_tree_xml(root)
         
-        # Should handle repeated placeholders and multiple responses
-        self.assertIn("<final-response>First response First response and Second response plus Third response for Test task</final-response>", result)
+        # Should handle repeated placeholders and multiple responses with context format
+        expected_final_response = """<final-response>CONTEXT1:
+Test task
+
+CONTEXT2:
+First response
+
+CONTEXT3:
+Second response
+
+CONTEXT4:
+Third response
+
+$CONTEXT2 $CONTEXT2 and $CONTEXT3 plus $CONTEXT4 for $CONTEXT1</final-response>"""
+        self.assertIn(expected_final_response, result)
 
 
 if __name__ == "__main__":
