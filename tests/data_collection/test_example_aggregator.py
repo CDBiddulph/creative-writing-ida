@@ -16,27 +16,50 @@ class TestExampleAggregator:
     @pytest.fixture
     def mock_config(self):
         """Create a mock data collection config."""
-        return DataCollectionConfig(
-            experiment_id="test_exp",
-            leaf_examples_per_iteration=5,
-            parent_examples_per_iteration=3,
-            max_parent_examples=20,
-            max_iterations=3,
-            sample_max_depth=2,
-            parent_max_depth=1,
-            leaf_max_depth=3,
-            writing_prompts_path="prompts.txt",
-            seed_leaf_examples="examples/leaf.xml",
-            seed_parent_examples="examples/parent.xml",
-            parent_total_char_limit=2000,
-            parent_submit_char_limit=500,
-            web_ui_port=5000,
-            model="test-model",
-            temperature=0.7,
-            max_tokens=1000,
-            leaf_readme_path="leaf_readme.md",
-            parent_readme_path="parent_readme.md"
-        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create seed files
+            seed_leaf = Path(tmpdir) / "seed_leaf.xml"
+            seed_parent = Path(tmpdir) / "seed_parent.xml"
+            
+            seed_leaf.write_text("""<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+  <session>
+    <prompt>Seed leaf prompt</prompt>
+    <submit>Seed leaf response</submit>
+  </session>
+</sessions>""")
+            
+            seed_parent.write_text("""<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+  <session>
+    <prompt>Seed parent prompt</prompt>
+    <ask>Break this down</ask>
+    <response>Subtask result</response>
+    <submit>Combined result</submit>
+  </session>
+</sessions>""")
+            
+            yield DataCollectionConfig(
+                experiment_id="test_exp",
+                leaf_examples_per_iteration=5,
+                parent_examples_per_iteration=3,
+                max_parent_examples=20,
+                max_iterations=3,
+                sample_max_depth=2,
+                parent_max_depth=1,
+                leaf_max_depth=3,
+                writing_prompts_path="prompts.txt",
+                seed_leaf_examples=str(seed_leaf),
+                seed_parent_examples=str(seed_parent),
+                parent_total_char_limit=2000,
+                parent_submit_char_limit=500,
+                web_ui_port=5000,
+                model="test-model",
+                temperature=0.7,
+                max_tokens=1000,
+                leaf_readme_path="leaf_readme.md",
+                parent_readme_path="parent_readme.md"
+            )
     
     def create_leaf_session_xml(self, path: Path, prompt: str, final_response: str):
         """Create a leaf session XML file."""
@@ -273,12 +296,6 @@ class TestExampleAggregator:
             exp_path = Path(tmpdir) / "experiment"
             exp_path.mkdir()
             
-            # Copy seed files to experiment directory
-            shutil.copy(mock_config.seed_leaf_examples, exp_path / "seed_leaf.xml")
-            shutil.copy(mock_config.seed_parent_examples, exp_path / "seed_parent.xml")
-            mock_config.seed_leaf_examples = str(exp_path / "seed_leaf.xml")
-            mock_config.seed_parent_examples = str(exp_path / "seed_parent.xml")
-            
             # Create iterations 0, 1, 2 with parent sessions
             for i in range(3):
                 iter_path = exp_path / f"iteration_{i}"
@@ -340,11 +357,6 @@ class TestExampleAggregator:
             exp_path = Path(tmpdir) / "experiment"
             exp_path.mkdir()
             
-            # Copy seed files
-            shutil.copy(mock_config.seed_leaf_examples, exp_path / "seed_leaf.xml")
-            shutil.copy(mock_config.seed_parent_examples, exp_path / "seed_parent.xml")
-            mock_config.seed_leaf_examples = str(exp_path / "seed_leaf.xml")
-            mock_config.seed_parent_examples = str(exp_path / "seed_parent.xml")
             
             # Create 3 iterations with parent sessions
             for i in range(3):
@@ -383,9 +395,6 @@ class TestExampleAggregator:
             exp_path = Path(tmpdir) / "experiment"
             exp_path.mkdir()
             
-            # Copy seed files
-            shutil.copy(mock_config.seed_leaf_examples, exp_path / "seed_leaf.xml") 
-            mock_config.seed_leaf_examples = str(exp_path / "seed_leaf.xml")
             
             # Create simple structure
             iter0_path = exp_path / "iteration_0"

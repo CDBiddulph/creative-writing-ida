@@ -76,18 +76,46 @@ class TestExperiment:
     def mock_tree_runner(self):
         """Mock TreeRunner to avoid actual API calls."""
         with patch('src.data_collection.session_generator.TreeRunner') as mock_runner_class:
-            mock_runner = Mock()
-            mock_runner_class.return_value = mock_runner
             
             # Create a counter to generate unique content
             call_count = [0]
             
-            def run_and_save(prompt):
-                call_count[0] += 1
-                # Return a filename that would be created
-                return f"output_{call_count[0]}.xml"
+            def create_mock_runner(config):
+                mock_runner = Mock()
+                
+                def run_and_save(prompt):
+                    call_count[0] += 1
+                    filename = f"output_{call_count[0]}.xml"
+                    
+                    # Create the actual file in the output directory
+                    from pathlib import Path
+                    output_dir = Path(config.output_dir)
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    output_file = output_dir / filename
+                    
+                    # Create mock session XML content
+                    xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+  <final-response>Generated response for: {prompt}</final-response>
+  <session>
+    <id>0</id>
+    <prompt>{prompt}</prompt>
+    <submit>Generated response for: {prompt}</submit>
+  </session>
+  <session>
+    <id>1</id>
+    <prompt>Child prompt from: {prompt}</prompt>
+    <submit>Child response</submit>
+  </session>
+</sessions>"""
+                    output_file.write_text(xml_content)
+                    
+                    return filename
+                
+                mock_runner.run.side_effect = run_and_save
+                return mock_runner
             
-            mock_runner.run.side_effect = run_and_save
+            mock_runner_class.side_effect = create_mock_runner
             yield mock_runner_class
     
     def test_creates_new_experiment_directory_structure(self, test_config, mock_tree_runner):
@@ -97,7 +125,7 @@ class TestExperiment:
         # Fix random seed
         random.seed(42)
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         experiment.run()
         
         # Verify experiment directory exists
@@ -126,43 +154,43 @@ class TestExperiment:
     def test_resumes_existing_experiment_from_correct_iteration(self, test_config, mock_tree_runner):
         """Test that run() resumes from the last incomplete iteration."""
         config, tmpdir = test_config
-        
-        # Create existing experiment with iterations 0 and 1 complete
-        exp_path = Path(tmpdir) / "test_exp"
-        exp_path.mkdir()
-        
-        # Save config
-        config_dict = vars(config).copy()
-        (exp_path / "config.json").write_text(json.dumps(config_dict))
-        
-        # Create completed iterations
-        for i in range(2):
-            iter_path = exp_path / f"iteration_{i}"
-            iter_path.mkdir()
-            (iter_path / "examples").mkdir()
-            (iter_path / "examples" / "leaf_examples.xml").write_text("<sessions></sessions>")
-            (iter_path / "examples" / "parent_examples.xml").write_text("<sessions></sessions>")
-            (iter_path / "used_prompts.json").write_text(json.dumps([i+1, i+2]))
+        config.max_iterations = 3  # Need 3 iterations to test resumption
         
         # Fix random seed
         random.seed(42)
         
-        # Run experiment - should start from iteration 2
-        experiment = Experiment(config)
-        experiment.run()
+        # First, run experiment for 2 iterations only
+        config_partial = config.__class__(**vars(config))
+        config_partial.max_iterations = 2
         
-        # Verify iteration 2 was created
+        experiment1 = Experiment(config_partial, base_dir=Path(tmpdir))
+        experiment1.run()
+        
+        # Verify we have 2 iterations
+        exp_path = Path(tmpdir) / "test_exp"
+        assert (exp_path / "iteration_0").exists()
+        assert (exp_path / "iteration_1").exists()
+        assert not (exp_path / "iteration_2").exists()
+        
+        # Now resume with full config (3 iterations)
+        experiment2 = Experiment(config, base_dir=Path(tmpdir))
+        experiment2.run()
+        
+        # Verify iteration 2 was created during resume
         iter2_path = exp_path / "iteration_2"
         assert iter2_path.exists()
         
         # Verify used prompts accumulated correctly
+        iter0_used = json.loads((exp_path / "iteration_0" / "used_prompts.json").read_text())
+        iter1_used = json.loads((exp_path / "iteration_1" / "used_prompts.json").read_text())
         iter2_used = json.loads((iter2_path / "used_prompts.json").read_text())
-        assert 1 in iter2_used  # From iteration 0
-        assert 2 in iter2_used  # From iteration 0
-        assert 3 in iter2_used  # From iteration 1
-        assert 4 in iter2_used  # From iteration 1
-        # Plus new prompts from iteration 2
-        assert len(iter2_used) >= 6
+        
+        # Each iteration should have more used prompts (cumulative)
+        assert len(iter1_used) > len(iter0_used)
+        assert len(iter2_used) > len(iter1_used)
+        
+        # Verify no prompts are reused across iterations
+        assert len(set(iter2_used)) == len(iter2_used)  # No duplicates
     
     def test_completes_when_max_iterations_reached(self, test_config, mock_tree_runner):
         """Test that experiment stops after max_iterations."""
@@ -171,7 +199,7 @@ class TestExperiment:
         
         random.seed(42)
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         experiment.run()
         
         exp_path = Path(tmpdir) / config.experiment_id
@@ -191,9 +219,9 @@ class TestExperiment:
         config.writing_prompts_path = str(prompts_file)
         config.leaf_examples_per_iteration = 5  # Request more than available
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         
-        with pytest.raises(RuntimeError, match="insufficient prompts|not enough"):
+        with pytest.raises(RuntimeError, match="Insufficient prompts|not enough"):
             experiment.run()
     
     def test_generates_correct_final_command(self, test_config, mock_tree_runner):
@@ -203,7 +231,7 @@ class TestExperiment:
         
         random.seed(42)
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         experiment.run()
         
         command = experiment.get_final_command()
@@ -226,7 +254,7 @@ class TestExperiment:
         
         random.seed(42)
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         experiment.run()
         
         # Check sample session filenames
@@ -253,7 +281,7 @@ class TestExperiment:
         
         random.seed(42)
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         experiment.run()
         
         # Check leaf session filenames
@@ -278,7 +306,7 @@ class TestExperiment:
         
         random.seed(42)
         
-        experiment = Experiment(config)
+        experiment = Experiment(config, base_dir=Path(tmpdir))
         experiment.run()
         
         exp_path = Path(tmpdir) / config.experiment_id

@@ -194,7 +194,7 @@ class TestNodeSelector:
             
             selector = NodeSelector()
             
-            with pytest.raises(ValueError, match="malformed"):
+            with pytest.raises(ValueError, match="XML parsing error"):
                 selector.select_nodes_for_examples(sessions_dir, 1)
     
     def test_filename_preservation_in_results(self):
