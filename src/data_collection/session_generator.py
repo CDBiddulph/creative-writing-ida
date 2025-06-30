@@ -2,8 +2,8 @@
 
 from pathlib import Path
 from typing import List, Tuple
-import random
 import xml.etree.ElementTree as ET
+import re
 
 from .config import DataCollectionConfig
 from .node_selector import NodeSelector
@@ -172,14 +172,17 @@ class SessionGenerator:
 
     def _sanitize_prompt_for_filename(self, prompt_text: str) -> str:
         """Sanitize prompt text for use in filenames."""
-        return (
-            prompt_text[:30]
-            .lower()
-            .replace(" ", "-")
-            .replace("'", "")
-            .replace("?", "")
-            .replace("!", "")
-        )
+        # Convert to lowercase and strip leading/trailing whitespace
+        text = prompt_text.lower().strip()
+        # Remove all non-alphanumeric characters (keeping spaces for now)
+        text = re.sub(r"[^a-z0-9\s]", "", text)
+        # Replace one or more whitespace characters with a single hyphen
+        text = re.sub(r"\s+", "-", text)
+        # If the result is empty, use a fallback
+        if not text:
+            text = "unknown"
+        # Take only the first 30 characters
+        return text[:30]
 
     def _move_output_file(
         self, source_filename: str, output_dir: Path, target_filename: str
@@ -187,13 +190,13 @@ class SessionGenerator:
         """Move a file from TreeRunner output to target location."""
         source_path = output_dir / source_filename
         target_path = output_dir / target_filename
-        
+
         if not source_path.exists():
             raise FileNotFoundError(
                 f"TreeRunner output file not found: {source_path}. "
                 f"TreeRunner may have failed to generate the expected output."
             )
-        
+
         source_path.rename(target_path)
 
     def _generate_sample_sessions(
@@ -236,6 +239,10 @@ class SessionGenerator:
         self, sample_sessions_dir: Path, leaf_sessions_dir: Path, examples_dir: Path
     ) -> None:
         """Generate leaf sessions from selected nodes in sample sessions."""
+        # If no leaf sessions are requested, return early
+        if self.config.leaf_examples_per_iteration == 0:
+            return
+
         # Select nodes from sample sessions
         try:
             selected_nodes = self.node_selector.select_nodes_for_examples(
