@@ -187,8 +187,14 @@ class SessionGenerator:
         """Move a file from TreeRunner output to target location."""
         source_path = output_dir / source_filename
         target_path = output_dir / target_filename
-        if source_path.exists():
-            source_path.rename(target_path)
+        
+        if not source_path.exists():
+            raise FileNotFoundError(
+                f"TreeRunner output file not found: {source_path}. "
+                f"TreeRunner may have failed to generate the expected output."
+            )
+        
+        source_path.rename(target_path)
 
     def _generate_sample_sessions(
         self,
@@ -235,12 +241,23 @@ class SessionGenerator:
             selected_nodes = self.node_selector.select_nodes_for_examples(
                 sample_sessions_dir, self.config.leaf_examples_per_iteration
             )
-        except ValueError:
-            # Not enough nodes available - this is ok, just generate what we can
-            selected_nodes = []
+        except ValueError as e:
+            # Check if this is specifically about insufficient nodes
+            if "not enough" in str(e).lower() or "insufficient" in str(e).lower():
+                raise RuntimeError(
+                    f"Cannot generate {self.config.leaf_examples_per_iteration} leaf sessions: {e}. "
+                    f"Sample sessions may not have enough nodes for selection."
+                )
+            else:
+                # Re-raise other ValueErrors as they indicate real problems
+                raise RuntimeError(f"Node selection failed: {e}")
 
         if not selected_nodes:
-            return
+            raise RuntimeError(
+                f"Node selector returned empty list despite requesting "
+                f"{self.config.leaf_examples_per_iteration} leaf sessions. "
+                f"This indicates a problem with node selection logic."
+            )
 
         # Create TreeRunner config for leaf generation
         config = self._create_tree_runner_config(

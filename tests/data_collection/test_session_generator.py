@@ -46,11 +46,11 @@ class TestSessionGenerator:
             "src.data_collection.session_generator.TreeRunner"
         ) as mock_runner_class:
 
-            def create_mock_runner(*args, **kwargs):
+            def create_mock_runner(config):
                 mock_runner = Mock()
 
                 # Track which config was used
-                max_depth = kwargs.get("max_depth", args[0].max_depth if args else 0)
+                max_depth = config.max_depth
 
                 def run_and_create_file(prompt):
                     # Create XML content based on the prompt
@@ -69,9 +69,14 @@ class TestSessionGenerator:
   </session>
 </sessions>"""
 
-                    # In real implementation, TreeRunner would save to a file
-                    # For now, just return a dummy filename
-                    return f"tree_output_depth{max_depth}.xml"
+                    # Create the actual file in the output directory
+                    filename = f"tree_output_depth{max_depth}.xml"
+                    output_dir = Path(config.output_dir)
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    output_file = output_dir / filename
+                    output_file.write_text(xml_content)
+                    
+                    return filename
 
                 mock_runner.run.side_effect = run_and_create_file
                 mock_runner.max_depth = max_depth
@@ -105,12 +110,27 @@ class TestSessionGenerator:
             # Track calls to TreeRunner
             calls_made = []
 
-            def track_calls(*args, **kwargs):
+            def track_calls(config):
                 runner = Mock()
 
                 def tracked_run(prompt):
                     calls_made.append(prompt)
-                    return "output.xml"
+                    filename = "output.xml"
+                    
+                    # Create the actual file in the output directory
+                    output_dir = Path(config.output_dir)
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    output_file = output_dir / filename
+                    output_file.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+  <session>
+    <id>0</id>
+    <prompt>{prompt}</prompt>
+    <submit>Generated response</submit>
+  </session>
+</sessions>""")
+                    
+                    return filename
 
                 runner.run = tracked_run
                 return runner
@@ -409,26 +429,25 @@ class TestSessionGenerator:
             (examples_dir / "parent_examples.xml").write_text("<sessions></sessions>")
 
             # Create mock that actually writes files
-            def writing_runner(*args, **kwargs):
+            def writing_runner(config):
                 mock_runner = Mock()
 
                 def write_file(prompt):
                     # Simulate what TreeRunner would do - save to output directory
-                    # For testing, we'll just create empty files with expected names
-                    if "Write a story" in prompt:
-                        # This is a sample session
-                        # TODO: Update filename once exact truncation logic is known
-                        filename = "1-write-a-story-using-the-follow.xml"
-                        (iter_path / "sample-sessions" / filename).write_text(
-                            "<sessions></sessions>"
-                        )
-                    else:
-                        # This is a leaf session
-                        # TODO: Update filename format once known
-                        filename = "1-0-test-leaf-prompt.xml"
-                        (iter_path / "leaf-sessions" / filename).write_text(
-                            "<sessions></sessions>"
-                        )
+                    filename = "test_output.xml"
+                    
+                    # Create the file in the TreeRunner's output directory
+                    output_dir = Path(config.output_dir)
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    output_file = output_dir / filename
+                    output_file.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+  <session>
+    <id>0</id>
+    <prompt>{prompt}</prompt>
+    <submit>Generated response</submit>
+  </session>
+</sessions>""")
 
                     return filename
 
