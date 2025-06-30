@@ -22,7 +22,6 @@ class TestTreeRunner(unittest.TestCase):
             max_tokens=1000,
             leaf_readme_path="test_leaf.md",
             parent_readme_path="test_parent.md",
-            prompt="Test prompt",
         )
 
     def tearDown(self):

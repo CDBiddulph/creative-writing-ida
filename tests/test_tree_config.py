@@ -24,7 +24,6 @@ class TestTreeRunnerConfig(unittest.TestCase):
             max_tokens=2000,
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
-            prompt="Test prompt",
         )
 
         self.assertEqual(config.model, "test-model")
@@ -47,7 +46,6 @@ class TestTreeRunnerConfig(unittest.TestCase):
             max_tokens=1000,
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
-            prompt="Test prompt",
             leaf_examples_xml_path="leaf_examples.xml",
             parent_examples_xml_path="parent_examples.xml",
         )
@@ -81,7 +79,7 @@ class TestParseArgs(unittest.TestCase):
         ]
 
         with patch("sys.argv", ["test"] + test_args):
-            config = parse_args()
+            config, prompt = parse_args()
 
             self.assertEqual(config.model, "claude-3-sonnet")
             self.assertEqual(config.max_depth, 3)
@@ -90,6 +88,7 @@ class TestParseArgs(unittest.TestCase):
             self.assertEqual(config.max_tokens, 2000)
             self.assertEqual(config.leaf_readme_path, "prompts/leaf.md")
             self.assertEqual(config.parent_readme_path, "prompts/parent.md")
+            self.assertEqual(prompt, "Test prompt")
 
     def test_parse_args_with_optional(self):
         """Test parsing with optional arguments included."""
@@ -117,7 +116,7 @@ class TestParseArgs(unittest.TestCase):
         ]
 
         with patch("sys.argv", ["test"] + test_args):
-            config = parse_args()
+            config, _ = parse_args()
 
             self.assertEqual(config.leaf_examples_xml_path, "examples/leaf.xml")
             self.assertEqual(config.parent_examples_xml_path, "examples/parent.xml")
@@ -143,10 +142,11 @@ class TestParseArgs(unittest.TestCase):
         ]
 
         with patch("sys.argv", ["test"] + test_args):
-            config = parse_args()
+            config, prompt = parse_args()
 
             # Should use default output directory
             self.assertEqual(config.output_dir, "sessions/")
+            self.assertEqual(prompt, "Test prompt")
 
     def test_parse_args_invalid_depth(self):
         """Test parsing with invalid max depth values."""
@@ -233,7 +233,6 @@ class TestCreateSessionGenerator(unittest.TestCase):
             max_tokens=1000,
             leaf_readme_path="leaf.md",
             parent_readme_path="parent.md",
-            prompt="Test prompt",
         )
 
     def tearDown(self):
@@ -315,7 +314,6 @@ class TestCreateSessionGenerator(unittest.TestCase):
             max_tokens=1000,
             leaf_readme_path="nonexistent.md",
             parent_readme_path="also_nonexistent.md",
-            prompt="Test prompt",
         )
 
         # The function should handle non-existent files gracefully

@@ -16,13 +16,13 @@ def main():
     logging.basicConfig(level=logging.INFO)
 
     # Parse command line arguments
-    config = parse_args()
+    config, prompt = parse_args()
 
     # Create and run the tree generation
     runner = TreeRunner(config)
 
-    # Run the generation process using prompt from config
-    output_filename = runner.run(config.prompt)
+    # Run the generation process using the prompt
+    output_filename = runner.run(prompt)
 
     print(f"Session saved to: {output_filename}")
 

@@ -69,7 +69,6 @@ class SessionGenerator:
             max_tokens=self.config.max_tokens,
             leaf_readme_path=self.config.leaf_readme_path,
             parent_readme_path=self.config.parent_readme_path,
-            prompt="",  # Will be set per prompt in the loop
             leaf_examples_xml_path=str(examples_dir / "leaf_examples.xml"),
             parent_examples_xml_path=str(examples_dir / "parent_examples.xml"),
         )
@@ -82,9 +81,6 @@ class SessionGenerator:
                 story_prompt = (
                     f"Write a story using the following prompt: {prompt_text}"
                 )
-
-                # Update config with current prompt
-                sample_config.prompt = story_prompt
 
                 # Generate session tree
                 output_filename = sample_runner.run(story_prompt)
@@ -137,7 +133,6 @@ class SessionGenerator:
             max_tokens=self.config.max_tokens,
             leaf_readme_path=self.config.leaf_readme_path,
             parent_readme_path=self.config.parent_readme_path,
-            prompt="",  # Will be set per prompt in the loop
             leaf_examples_xml_path=str(examples_dir / "leaf_examples.xml"),
             parent_examples_xml_path=str(examples_dir / "parent_examples.xml"),
         )
@@ -148,9 +143,6 @@ class SessionGenerator:
             try:
                 # Extract original prompt index from filename
                 prompt_index = filename.split("-", 1)[0]
-
-                # Update config with current prompt
-                leaf_config.prompt = prompt_text
 
                 # Generate leaf session
                 output_filename = leaf_runner.run(prompt_text)
