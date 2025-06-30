@@ -4,7 +4,6 @@ from pathlib import Path
 
 from .config import DataCollectionConfig
 from .file_manager import FileManager
-from .prompt_sampler import PromptSampler
 from .session_generator import SessionGenerator
 from .example_aggregator import ExampleAggregator
 
@@ -26,7 +25,6 @@ class Experiment:
         self.experiment_path = base_dir / config.experiment_id
 
         self.file_manager = FileManager(self.experiment_path)
-        self.prompt_sampler = PromptSampler(config.writing_prompts_path)
         self.session_generator = SessionGenerator(config)
         self.example_aggregator = ExampleAggregator(config)
 
@@ -137,43 +135,12 @@ class Experiment:
         # Setup iteration directory
         iteration_path = self.file_manager.setup_iteration(iteration)
 
-        # Sample prompts for this iteration
-        try:
-            if iteration == 0:
-                # For iteration 0, we can use all available prompts since none are used yet
-                num_prompts = min(
-                    self.config.leaf_examples_per_iteration
-                    + self.config.parent_examples_per_iteration,
-                    len(self.prompt_sampler.prompts),
-                )
-            else:
-                # For later iterations, check how many prompts are still available
-                used_prompts = self.prompt_sampler._get_cumulative_used_prompts(
-                    self.experiment_path
-                )
-                available_count = len(self.prompt_sampler.prompts) - len(used_prompts)
-                num_prompts = min(
-                    self.config.leaf_examples_per_iteration
-                    + self.config.parent_examples_per_iteration,
-                    available_count,
-                )
-
-            if num_prompts <= 0:
-                raise RuntimeError("Insufficient prompts available for this iteration")
-
-            prompts = self.prompt_sampler.sample_prompts_for_iteration(
-                self.experiment_path, iteration, num_prompts
-            )
-        except ValueError as e:
-            raise RuntimeError(f"Prompt sampling failed: {e}")
-
         # Create examples for this iteration
         self.example_aggregator.create_examples_for_iteration(
             iteration_path, iteration, self.experiment_path
         )
 
-        # Generate sessions using the prompts and examples
-        examples_dir = iteration_path / "examples"
+        # Generate sessions for this iteration
         self.session_generator.generate_sessions_for_iteration(
-            iteration_path, prompts, examples_dir
+            iteration_path, self.experiment_path, iteration
         )
