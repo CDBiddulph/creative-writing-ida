@@ -1,7 +1,10 @@
 """Tests for XML utility functions."""
 
 import unittest
+import tempfile
+from pathlib import Path
 from src.xml_utils import xml_are_equivalent, xml_lists_are_equivalent
+from src.xml_service import XmlService
 
 
 class TestXmlUtils(unittest.TestCase):
@@ -103,6 +106,44 @@ class TestXmlUtils(unittest.TestCase):
                 ],
             )
         )
+
+    def test_xml_utils_integration_with_xml_service(self):
+        """Test that xml_utils functions work with XmlService generated XML."""
+        # Create XmlService instance
+        xml_service = XmlService()
+
+        # Create some sessions using xml_service
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+            f.write(
+                """<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+<session>
+<id>0</id>
+<prompt>Test prompt</prompt>
+<submit>Test result</submit>
+</session>
+</sessions>"""
+            )
+            test_file = Path(f.name)
+
+        # Parse sessions using the service
+        sessions = xml_service.parse_sessions_file(test_file)
+
+        # Format them back to XML
+        formatted_xml = xml_service.format_sessions_to_xml(sessions)
+
+        # The formatted XML should be equivalent to a reference version
+        reference_xml = """<?xml version="1.0" encoding="UTF-8"?>
+<sessions>
+<session>
+<id>0</id>
+<prompt>Test prompt</prompt>
+<submit>Test result</submit>
+</session>
+</sessions>"""
+
+        # Use our xml_utils function to compare
+        self.assertTrue(xml_are_equivalent(formatted_xml, reference_xml))
 
 
 if __name__ == "__main__":
