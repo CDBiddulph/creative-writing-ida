@@ -154,18 +154,14 @@ class SessionGenerator:
             dirs["sample_sessions"], dirs["leaf_sessions"], dirs["examples"]
         )
 
-    def _generate_sample_sessions(
-        self,
-        prompts: List[Tuple[int, str]],
-        sample_sessions_dir: Path,
-        examples_dir: Path,
-    ) -> None:
-        """Generate sample sessions from writing prompts using tree runner."""
-        # Create TreeRunner config for sample generation
-        sample_config = TreeRunnerConfig(
+    def _create_tree_runner_config(
+        self, max_depth: int, output_dir: Path, examples_dir: Path
+    ) -> TreeRunnerConfig:
+        """Create a TreeRunner configuration with common settings."""
+        return TreeRunnerConfig(
             model=self.config.model,
-            max_depth=self.config.sample_max_depth,
-            output_dir=str(sample_sessions_dir),
+            max_depth=max_depth,
+            output_dir=str(output_dir),
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
             leaf_readme_path=self.config.leaf_readme_path,
@@ -174,7 +170,37 @@ class SessionGenerator:
             parent_examples_xml_path=str(examples_dir / "parent_examples.xml"),
         )
 
-        sample_runner = TreeRunner(sample_config)
+    def _sanitize_prompt_for_filename(self, prompt_text: str) -> str:
+        """Sanitize prompt text for use in filenames."""
+        return (
+            prompt_text[:30]
+            .lower()
+            .replace(" ", "-")
+            .replace("'", "")
+            .replace("?", "")
+            .replace("!", "")
+        )
+
+    def _move_output_file(
+        self, source_filename: str, output_dir: Path, target_filename: str
+    ) -> None:
+        """Move a file from TreeRunner output to target location."""
+        source_path = output_dir / source_filename
+        target_path = output_dir / target_filename
+        if source_path.exists():
+            source_path.rename(target_path)
+
+    def _generate_sample_sessions(
+        self,
+        prompts: List[Tuple[int, str]],
+        sample_sessions_dir: Path,
+        examples_dir: Path,
+    ) -> None:
+        """Generate sample sessions from writing prompts using tree runner."""
+        config = self._create_tree_runner_config(
+            self.config.sample_max_depth, sample_sessions_dir, examples_dir
+        )
+        runner = TreeRunner(config)
 
         for prompt_index, prompt_text in prompts:
             try:
@@ -184,25 +210,16 @@ class SessionGenerator:
                 )
 
                 # Generate session tree
-                output_filename = sample_runner.run(story_prompt)
+                output_filename = runner.run(story_prompt)
 
-                # Move/rename to sample-sessions directory with proper naming
-                # Truncate prompt for filename (first 30 chars, replace spaces with hyphens)
-                truncated_prompt = (
-                    prompt_text[:30]
-                    .lower()
-                    .replace(" ", "-")
-                    .replace("'", "")
-                    .replace("?", "")
-                    .replace("!", "")
+                # Create target filename
+                sanitized_prompt = self._sanitize_prompt_for_filename(prompt_text)
+                target_filename = f"{prompt_index}-{sanitized_prompt}.xml"
+
+                # Move file to proper location
+                self._move_output_file(
+                    output_filename, sample_sessions_dir, target_filename
                 )
-                target_filename = f"{prompt_index}-{truncated_prompt}.xml"
-                target_path = sample_sessions_dir / target_filename
-
-                # TreeRunner returns just the filename, file is saved in output_dir
-                source_path = Path(sample_config.output_dir) / output_filename
-                if source_path.exists():
-                    source_path.rename(target_path)
 
             except Exception as e:
                 raise RuntimeError(
@@ -226,19 +243,10 @@ class SessionGenerator:
             return
 
         # Create TreeRunner config for leaf generation
-        leaf_config = TreeRunnerConfig(
-            model=self.config.model,
-            max_depth=self.config.leaf_max_depth,
-            output_dir=str(leaf_sessions_dir),
-            temperature=self.config.temperature,
-            max_tokens=self.config.max_tokens,
-            leaf_readme_path=self.config.leaf_readme_path,
-            parent_readme_path=self.config.parent_readme_path,
-            leaf_examples_xml_path=str(examples_dir / "leaf_examples.xml"),
-            parent_examples_xml_path=str(examples_dir / "parent_examples.xml"),
+        config = self._create_tree_runner_config(
+            self.config.leaf_max_depth, leaf_sessions_dir, examples_dir
         )
-
-        leaf_runner = TreeRunner(leaf_config)
+        runner = TreeRunner(config)
 
         for filename, node_id, prompt_text in selected_nodes:
             try:
@@ -246,24 +254,16 @@ class SessionGenerator:
                 prompt_index = filename.split("-", 1)[0]
 
                 # Generate leaf session
-                output_filename = leaf_runner.run(prompt_text)
+                output_filename = runner.run(prompt_text)
 
                 # Create proper filename for leaf session
-                truncated_prompt = (
-                    prompt_text[:30]
-                    .lower()
-                    .replace(" ", "-")
-                    .replace("'", "")
-                    .replace("?", "")
-                    .replace("!", "")
-                )
-                target_filename = f"{prompt_index}-{node_id}-{truncated_prompt}.xml"
-                target_path = leaf_sessions_dir / target_filename
+                sanitized_prompt = self._sanitize_prompt_for_filename(prompt_text)
+                target_filename = f"{prompt_index}-{node_id}-{sanitized_prompt}.xml"
 
-                # TreeRunner returns just the filename, file is saved in output_dir
-                source_path = Path(leaf_config.output_dir) / output_filename
-                if source_path.exists():
-                    source_path.rename(target_path)
+                # Move file to proper location
+                self._move_output_file(
+                    output_filename, leaf_sessions_dir, target_filename
+                )
 
             except Exception as e:
                 raise RuntimeError(
