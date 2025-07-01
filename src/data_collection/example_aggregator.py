@@ -1,13 +1,12 @@
 """Example aggregation and formatting."""
 
 from pathlib import Path
-from typing import List, Dict, Any
-import xml.etree.ElementTree as ET
-import random
+from typing import List
 import shutil
+import logging
 
-# Import existing XML formatting utilities
-from ..xml_formatter import XmlFormatter
+from ..session import Session, PromptEvent, SubmitEvent
+from ..xml_service import XmlService
 from .config import DataCollectionConfig
 
 
@@ -17,7 +16,7 @@ class ExampleAggregator:
     def __init__(self, config: DataCollectionConfig):
         """Initialize example aggregator with configuration."""
         self.config = config
-        self.xml_formatter = XmlFormatter()
+        self.xml_service = XmlService()
 
     def create_examples_for_iteration(
         self, iteration_path: Path, iteration: int, experiment_path: Path
@@ -60,46 +59,20 @@ class ExampleAggregator:
         prev_iteration_path = experiment_path / f"iteration_{iteration - 1}"
         leaf_sessions_dir = prev_iteration_path / "leaf-sessions"
 
-        leaf_examples = []
-
         if leaf_sessions_dir.exists():
-            for session_file in leaf_sessions_dir.glob("*.xml"):
-                try:
-                    tree = ET.parse(session_file)
-
-                    # Find root session (id=0)
-                    root_session = None
-                    for session in tree.findall(".//session"):
-                        id_elem = session.find("id")
-                        if id_elem is not None and id_elem.text == "0":
-                            root_session = session
-                            break
-
-                    if root_session is not None:
-                        # Extract prompt and final-response
-                        prompt_elem = root_session.find("prompt")
-                        final_response_elem = tree.find(".//final-response")
-
-                        if prompt_elem is not None and final_response_elem is not None:
-                            leaf_examples.append(
-                                {
-                                    "prompt": prompt_elem.text,
-                                    "submit": final_response_elem.text,
-                                }
-                            )
-
-                except ET.ParseError:
-                    # Skip malformed files
-                    continue
-
-        # Save leaf examples
-        self._save_examples(leaf_examples, examples_dir / "leaf_examples.xml", "leaf")
+            # Extract leaf examples: root session with prompt + final-response as submit
+            leaf_sessions = self._extract_leaf_examples_from_trees(leaf_sessions_dir)
+            # Write sessions directly to file
+            if leaf_sessions:
+                self.xml_service.write_sessions_file(
+                    leaf_sessions, examples_dir / "leaf_examples.xml"
+                )
 
     def _generate_parent_examples(
         self, examples_dir: Path, experiment_path: Path, iteration: int
     ) -> None:
         """Generate parent examples by accumulating from all previous parent sessions."""
-        parent_examples = []
+        parent_sessions = []
 
         # Accumulate from all previous iterations (up to max_parent_examples)
         for prev_iter in range(iteration):
@@ -107,86 +80,96 @@ class ExampleAggregator:
             parent_sessions_dir = prev_iteration_path / "parent-sessions"
 
             if parent_sessions_dir.exists():
-                for session_file in parent_sessions_dir.glob("*.xml"):
-                    if len(parent_examples) >= self.config.max_parent_examples:
-                        break
+                # Extract parent examples: complete root session structure
+                batch_sessions = self._extract_parent_examples_from_trees(
+                    parent_sessions_dir,
+                    self.config.max_parent_examples - len(parent_sessions),
+                )
+                parent_sessions.extend(batch_sessions)
 
-                    try:
-                        tree = ET.parse(session_file)
-
-                        # Find root session (id=0)
-                        root_session = None
-                        for session in tree.findall(".//session"):
-                            id_elem = session.find("id")
-                            if id_elem is not None and id_elem.text == "0":
-                                root_session = session
-                                break
-
-                        if root_session is not None:
-                            # Extract full session structure
-                            example = {}
-
-                            # Get all elements in order
-                            for elem in root_session:
-                                if elem.tag == "prompt":
-                                    example["prompt"] = elem.text
-                                elif elem.tag == "submit":
-                                    example["submit"] = elem.text
-                                elif elem.tag in ["notes", "ask", "response"]:
-                                    # Handle multiple instances
-                                    if elem.tag not in example:
-                                        example[elem.tag] = []
-                                    example[elem.tag].append(elem.text)
-
-                            if "prompt" in example:
-                                parent_examples.append(example)
-
-                    except ET.ParseError:
-                        # Skip malformed files
-                        continue
-
-                if len(parent_examples) >= self.config.max_parent_examples:
+                if len(parent_sessions) >= self.config.max_parent_examples:
                     break
 
-        # Save parent examples
-        self._save_examples(
-            parent_examples, examples_dir / "parent_examples.xml", "parent"
+        # Write sessions directly to file (empty list is valid)
+        self.xml_service.write_sessions_file(
+            parent_sessions, examples_dir / "parent_examples.xml"
         )
 
-    def _save_examples(
-        self, examples: List[Dict[str, Any]], output_path: Path, example_type: str
-    ) -> None:
-        """Save examples to XML file with proper formatting."""
-        # Create XML structure
-        sessions_elem = ET.Element("sessions")
+    def _extract_leaf_examples_from_trees(
+        self, leaf_sessions_dir: Path
+    ) -> List[Session]:
+        """Extract leaf examples from tree files: root session prompt + final-response as submit."""
 
-        for example in examples:
-            session_elem = ET.SubElement(sessions_elem, "session")
+        leaf_sessions = []
+        for xml_file in leaf_sessions_dir.glob("*.xml"):
+            try:
+                # Parse the full tree and extract final-response
+                final_response = self.xml_service.extract_final_response(xml_file)
+                if final_response is None:
+                    logging.warning(f"No final response found for {xml_file}; skipping")
+                    continue
 
-            # Add prompt first
-            if "prompt" in example:
-                prompt_elem = ET.SubElement(session_elem, "prompt")
-                prompt_elem.text = example["prompt"]
+                # Parse sessions and find root session (id=0)
+                all_sessions = self.xml_service.parse_sessions_file(xml_file)
+                root_session = None
+                for session in all_sessions:
+                    if session.session_id == 0:
+                        root_session = session
+                        break
 
-            if example_type == "parent":
-                # Add all elements in order for parent examples
-                # Handle notes, asks, responses as lists
-                for key in ["notes", "ask", "response"]:
-                    if key in example and isinstance(example[key], list):
-                        for value in example[key]:
-                            elem = ET.SubElement(session_elem, key)
-                            elem.text = value
+                if root_session is None:
+                    logging.warning(f"Root session not found for {xml_file}; skipping")
+                    continue
 
-            # Add submit last
-            if "submit" in example:
-                submit_elem = ET.SubElement(session_elem, "submit")
-                submit_elem.text = example["submit"]
+                # Extract prompt from root session
+                prompt_event = root_session.events[0] if root_session.events else None
+                if not isinstance(prompt_event, PromptEvent):
+                    logging.warning(
+                        f"First event for {xml_file} is not a prompt event (found {type(prompt_event) if prompt_event else 'empty list'}); skipping"
+                    )
+                    continue
 
-        # Pretty print using existing formatter's indent method
-        self.xml_formatter._indent(sessions_elem)
+                # Create new leaf session with prompt + final-response as submit
+                leaf_session = Session(session_id=len(leaf_sessions))
+                leaf_session.add_event(PromptEvent(prompt_event.text))
+                leaf_session.add_event(SubmitEvent(final_response))
+                leaf_sessions.append(leaf_session)
 
-        # Create XML string with declaration
-        xml_str = '<?xml version="1.0" encoding="UTF-8"?>\n'
-        xml_str += ET.tostring(sessions_elem, encoding="unicode")
+                if len(leaf_sessions) >= self.config.leaf_examples_per_iteration:
+                    break
 
-        output_path.write_text(xml_str)
+            except Exception:
+                logging.warning(f"Error parsing {xml_file}; skipping")
+                continue
+
+        return leaf_sessions
+
+    def _extract_parent_examples_from_trees(
+        self, parent_sessions_dir: Path, max_count: int
+    ) -> List[Session]:
+        """Extract parent examples from tree files: complete root session structure."""
+        parent_sessions = []
+        for xml_file in parent_sessions_dir.glob("*.xml"):
+            try:
+                # Parse sessions and find root session (id=0)
+                all_sessions = self.xml_service.parse_sessions_file(xml_file)
+                root_session = None
+                for session in all_sessions:
+                    if session.session_id == 0:
+                        root_session = session
+                        break
+
+                if root_session is not None:
+                    # Copy the root session and update its ID for the examples file
+                    example_session = root_session.copy()
+                    example_session.session_id = len(parent_sessions)
+                    parent_sessions.append(example_session)
+
+                    if len(parent_sessions) >= max_count:
+                        break
+
+            except Exception:
+                # Skip malformed files
+                continue
+
+        return parent_sessions

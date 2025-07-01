@@ -278,6 +278,27 @@ class TestSession(unittest.TestCase):
 
         self.assertEqual(session.get_submit_text(), FAILED_STR)
 
+    def test_get_prompt_text_success(self):
+        """Test get_prompt_text returns correct text when first event is prompt."""
+        session = Session(session_id=0)
+        session.add_event(PromptEvent(text="Test"))
+        session.add_event(AskEvent(text="Question?"))
+        session.add_event(ResponseEvent(text="Answer"))
+        session.add_event(SubmitEvent(text="Done"))
+
+        self.assertEqual(session.get_prompt_text(), "Test")
+
+    def test_get_prompt_text_wrong_first_event(self):
+        """Test get_prompt_text raises error when first event is not prompt."""
+        session = Session(session_id=0)
+        session.add_event(AskEvent(text="Question?"))
+        session.add_event(PromptEvent(text="Test"))
+
+        with self.assertRaises(ValueError) as cm:
+            session.get_prompt_text()
+
+        self.assertIn("First event is not a prompt event", str(cm.exception))
+
     def test_to_xml_with_include_closing_tag(self):
         """Test to_xml with include_closing_tag parameter."""
         session = Session(session_id=0)

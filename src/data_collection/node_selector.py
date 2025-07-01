@@ -3,7 +3,8 @@
 from pathlib import Path
 from typing import List, Tuple
 import random
-import xml.etree.ElementTree as ET
+
+from ..xml_service import XmlService
 
 
 class NodeSelector:
@@ -18,6 +19,7 @@ class NodeSelector:
         """
         if random_seed is not None:
             random.seed(random_seed)
+        self.xml_service = XmlService()
 
     def select_nodes_for_examples(
         self, sessions_dir: Path, num_examples: int
@@ -35,31 +37,33 @@ class NodeSelector:
         Raises:
             ValueError: If not enough nodes available for selection
         """
-        # Collect all nodes from all session files
-        all_nodes = []
+        # Get all XML files
+        xml_files = list(sessions_dir.glob("*.xml"))
 
-        for session_file in sessions_dir.glob("*.xml"):
-            try:
-                tree = ET.parse(session_file)
-                sessions = tree.findall(".//session")
-
-                for session in sessions:
-                    session_id_elem = session.find("id")
-                    prompt_elem = session.find("prompt")
-
-                    if session_id_elem is not None and prompt_elem is not None:
-                        node_id = int(session_id_elem.text)
-                        prompt_text = prompt_elem.text
-                        all_nodes.append((session_file.name, node_id, prompt_text))
-
-            except (ET.ParseError, ValueError) as e:
-                raise ValueError(f"XML parsing error in {session_file}: {e}")
-
-        if len(all_nodes) < num_examples:
+        if len(xml_files) < num_examples:
             raise ValueError(
-                f"Not enough nodes available for selection. "
-                f"Need {num_examples}, but only {len(all_nodes)} nodes found."
+                f"Not enough files available for selection. "
+                f"Need {num_examples}, but only {len(xml_files)} files found."
             )
 
-        # Randomly select the requested number
-        return random.sample(all_nodes, num_examples)
+        # Randomly select the requested number of files
+        selected_files = random.sample(xml_files, num_examples)
+
+        selected_nodes = []
+        for xml_file in selected_files:
+            sessions = self.xml_service.parse_sessions_file(xml_file)
+
+            # Collect all nodes from this file
+            file_nodes = []
+            for session in sessions:
+                prompt_text = session.get_prompt_text()
+                file_nodes.append((xml_file.name, session.session_id, prompt_text))
+
+            # Randomly select one node from this file
+            if file_nodes:
+                selected_node = random.choice(file_nodes)
+                selected_nodes.append(selected_node)
+            else:
+                raise ValueError(f"No valid nodes found in file: {xml_file}")
+
+        return selected_nodes

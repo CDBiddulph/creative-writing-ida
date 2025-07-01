@@ -5,10 +5,19 @@ a clean interface for all XML-related operations including parsing, validation,
 formatting, and example extraction.
 """
 
+import xml.etree.ElementTree as ET
+import io
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
-from .session import Session
+from .session import (
+    Session,
+    PromptEvent,
+    NotesEvent,
+    AskEvent,
+    ResponseEvent,
+    SubmitEvent,
+)
 from .xml_validator import XmlValidator
 
 
@@ -35,36 +44,57 @@ class XmlService:
         Raises:
             ValueError: If XML is malformed or cannot be parsed
         """
-        raise NotImplementedError("parse_sessions_file not yet implemented")
+        try:
+            if file_path.is_dir():
+                raise ValueError(f"Expected file path, got directory: {file_path}")
 
-    def parse_session_nodes(self, file_path: Path) -> List[Tuple[str, int, str]]:
-        """Extract node information for selection purposes.
+            content = file_path.read_text(encoding="utf-8")
+            root = ET.fromstring(content)
 
-        Args:
-            file_path: Path to the XML file containing sessions
+            if root.tag != "sessions":
+                raise ValueError(f"Expected root element 'sessions', got '{root.tag}'")
 
-        Returns:
-            List of tuples (filename, session_id, prompt_text) for each session
+            sessions = []
+            for session_elem in root.findall("session"):
+                # Get session ID
+                id_elem = session_elem.find("id")
+                if id_elem is None or id_elem.text is None:
+                    raise ValueError(f"Session without ID: {session_elem}")
 
-        Raises:
-            ValueError: If XML is malformed or cannot be parsed
-        """
-        raise NotImplementedError("parse_session_nodes not yet implemented")
+                try:
+                    session_id = int(id_elem.text)
+                except ValueError:
+                    raise ValueError(f"Invalid session ID: {id_elem.text}")
 
-    def extract_session_examples(
-        self, sessions_dir: Path, example_type: str, max_examples: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """Extract examples from session files for aggregation.
+                # Create session object
+                session = Session(session_id=session_id)
 
-        Args:
-            sessions_dir: Directory containing session XML files
-            example_type: Type of examples to extract ("leaf" or "parent")
-            max_examples: Maximum number of examples to extract (None for no limit)
+                # Parse events (skip id, response-id, and notes elements)
+                for elem in session_elem:
+                    text = elem.text or ""
+                    if elem.tag in ("id", "response-id"):
+                        continue
+                    elif elem.tag == "prompt":
+                        session.add_event(PromptEvent(text=text))
+                    elif elem.tag == "notes":
+                        session.add_event(NotesEvent(text=text))
+                    elif elem.tag == "ask":
+                        session.add_event(AskEvent(text=text))
+                    elif elem.tag == "response":
+                        session.add_event(ResponseEvent(text=text))
+                    elif elem.tag == "submit":
+                        session.add_event(SubmitEvent(text=text))
+                    else:
+                        raise ValueError(f"Unknown element: {elem.tag}")
 
-        Returns:
-            List of example dictionaries with extracted content
-        """
-        raise NotImplementedError("extract_session_examples not yet implemented")
+                sessions.append(session)
+
+            return sessions
+
+        except ET.ParseError as e:
+            raise ValueError(f"XML parsing error: {e}")
+        except FileNotFoundError:
+            raise ValueError(f"File not found: {file_path}")
 
     def validate_session_xml(
         self, xml_string: str, is_leaf: bool, is_partial: bool = False
@@ -79,7 +109,7 @@ class XmlService:
         Returns:
             True if XML is valid, False otherwise
         """
-        raise NotImplementedError("validate_session_xml not yet implemented")
+        return self.xml_validator.validate_session_xml(xml_string, is_leaf, is_partial)
 
     def format_sessions_to_xml(
         self, sessions: List[Session], final_response: str = None
@@ -93,7 +123,54 @@ class XmlService:
         Returns:
             Complete XML document string with headers and formatting
         """
-        raise NotImplementedError("format_sessions_to_xml not yet implemented")
+        # Create root sessions element
+        sessions_elem = ET.Element("sessions")
+
+        # Add final-response if provided
+        if final_response:
+            final_elem = ET.SubElement(sessions_elem, "final-response")
+            final_elem.text = final_response
+
+        # Add each session
+        for session in sessions:
+            session_elem = ET.SubElement(sessions_elem, "session")
+
+            # Add session ID
+            id_elem = ET.SubElement(session_elem, "id")
+            id_elem.text = str(session.session_id)
+
+            # Add events
+            for event in session.events:
+                event_elem = event.to_xml_element()
+                session_elem.append(event_elem)
+
+        # Pretty print
+        self._indent(sessions_elem)
+
+        # Create XML string with header
+        output = io.StringIO()
+        output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+
+        tree = ET.ElementTree(sessions_elem)
+        tree.write(output, encoding="unicode", xml_declaration=False)
+
+        return output.getvalue()
+
+    def _indent(self, elem: ET.Element, level: int = 0):
+        """Add whitespace to ElementTree for pretty printing."""
+        indent = "\n" + level * "  "
+        if len(elem):
+            if not elem.text or not elem.text.strip():
+                elem.text = indent + "  "
+            if not elem.tail or not elem.tail.strip():
+                elem.tail = indent
+            for child in elem:
+                self._indent(child, level + 1)
+            if not child.tail or not child.tail.strip():
+                child.tail = indent
+        else:
+            if level and (not elem.tail or not elem.tail.strip()):
+                elem.tail = indent
 
     def extract_final_response(self, file_path: Path) -> Optional[str]:
         """Extract final-response content from a session file.
@@ -104,7 +181,18 @@ class XmlService:
         Returns:
             Final response text if present, None otherwise
         """
-        raise NotImplementedError("extract_final_response not yet implemented")
+        try:
+            content = file_path.read_text(encoding="utf-8")
+            root = ET.fromstring(content)
+
+            final_elem = root.find("final-response")
+            if final_elem is not None and final_elem.text:
+                return final_elem.text
+
+            return None
+
+        except (ET.ParseError, FileNotFoundError):
+            raise ValueError(f"Error reading or parsing file: {file_path}")
 
     def count_sessions(self, file_path: Path) -> int:
         """Count the number of sessions in a file.
@@ -118,25 +206,6 @@ class XmlService:
         # Parse file and count sessions
         sessions = self.parse_sessions_file(file_path)
         return len(sessions)
-
-    def extract_session_by_id(
-        self, file_path: Path, session_id: int
-    ) -> Optional[Session]:
-        """Extract a specific session by ID.
-
-        Args:
-            file_path: Path to the XML file
-            session_id: ID of the session to extract
-
-        Returns:
-            Session object if found, None otherwise
-        """
-        # Parse file and find session
-        sessions = self.parse_sessions_file(file_path)
-        for session in sessions:
-            if session.session_id == session_id:
-                return session
-        return None
 
     def write_sessions_file(
         self, sessions: List[Session], file_path: Path, final_response: str = None

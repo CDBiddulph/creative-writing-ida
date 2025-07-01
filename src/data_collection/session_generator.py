@@ -2,12 +2,12 @@
 
 from pathlib import Path
 from typing import List, Tuple
-import xml.etree.ElementTree as ET
 import re
 
 from .config import DataCollectionConfig
 from .node_selector import NodeSelector
 from .prompt_sampler import PromptSampler
+from ..xml_service import XmlService
 
 # Import existing tree runner components
 from ..tree_runner import TreeRunner
@@ -27,6 +27,7 @@ class SessionGenerator:
         self.config = config
         self.node_selector = NodeSelector()
         self.prompt_sampler = PromptSampler(config.writing_prompts_path)
+        self.xml_service = XmlService()
 
     def _count_existing_parent_examples(
         self, iteration_path: Path, iteration: int
@@ -36,21 +37,13 @@ class SessionGenerator:
             # Seed examples from the first iteration don't count toward our parent example total
             return 0
 
-        examples_dir = iteration_path / "examples"
-        if not examples_dir.exists():
-            raise FileNotFoundError(f"Examples directory not found: {examples_dir}")
-
-        parent_examples_path = examples_dir / "parent_examples.xml"
+        parent_examples_path = iteration_path / "examples" / "parent_examples.xml"
         if not parent_examples_path.exists():
-            raise FileNotFoundError(
-                f"Parent examples file not found: {parent_examples_path}"
-            )
+            return 0  # No parent examples file means no parent examples
 
-        # Parse XML and count session elements
+        # Parse XML and count sessions using XmlService
         try:
-            tree = ET.parse(parent_examples_path)
-            root = tree.getroot()
-            return len(root.findall("session"))
+            return self.xml_service.count_sessions(parent_examples_path)
         except Exception as e:
             raise ValueError(
                 f"Failed to parse parent examples XML from {parent_examples_path}: {e}"

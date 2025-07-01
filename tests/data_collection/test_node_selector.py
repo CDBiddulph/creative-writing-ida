@@ -117,25 +117,25 @@ class TestNodeSelector:
             assert any(node_id in [0, 1] for node_id in unique_ids)  # Has parent
             assert any(node_id in [2, 3] for node_id in unique_ids)  # Has leaf
 
-    def test_handles_insufficient_nodes_gracefully(self):
-        """Test error when requesting more nodes than available."""
+    def test_handles_insufficient_files_gracefully(self):
+        """Test error when requesting more files than available."""
         with tempfile.TemporaryDirectory() as tmpdir:
             sessions_dir = Path(tmpdir) / "sample-sessions"
             sessions_dir.mkdir()
 
-            # Create one session with 3 nodes
-            session_file = sessions_dir / "1-test.xml"
-            self.create_sample_session_xml(session_file)
+            # Create 2 session files with 3 nodes each
+            self.create_sample_session_xml(sessions_dir / f"1-test.xml")
+            self.create_sample_session_xml(sessions_dir / f"2-test.xml")
 
             selector = NodeSelector()
 
-            # Can select 3 nodes
-            selected = selector.select_nodes_for_examples(sessions_dir, 3)
-            assert len(selected) == 3
+            # Can select 2 nodes from each file
+            selected = selector.select_nodes_for_examples(sessions_dir, 2)
+            assert len(selected) == 2
 
-            # Cannot select 4 nodes
-            with pytest.raises(ValueError, match="enough nodes"):
-                selector.select_nodes_for_examples(sessions_dir, 4)
+            # Cannot select 3 nodes
+            with pytest.raises(ValueError, match="enough files"):
+                selector.select_nodes_for_examples(sessions_dir, 3)
 
     def test_extracts_correct_prompt_text_from_nodes(self):
         """Test that the correct prompt text is extracted for each node."""
@@ -143,44 +143,33 @@ class TestNodeSelector:
             sessions_dir = Path(tmpdir) / "sample-sessions"
             sessions_dir.mkdir()
 
-            session_file = sessions_dir / "1-test.xml"
-            xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+            # Create 3 separate files, each with 1 session
+            for n in range(1, 4):
+                session_file = sessions_dir / f"{n}-test.xml"
+                xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <sessions>
   <session>
     <id>0</id>
-    <prompt>This is the root prompt</prompt>
-    <submit>Root result</submit>
-  </session>
-  <session>
-    <id>1</id>
-    <prompt>This is child 1 prompt</prompt>
-    <submit>Child 1 result</submit>
-  </session>
-  <session>
-    <id>2</id>
-    <prompt>This is child 2 prompt</prompt>
-    <submit>Child 2 result</submit>
+    <prompt>This is prompt {n}</prompt>
+    <submit>Result {n}</submit>
   </session>
 </sessions>"""
-            session_file.write_text(xml_content)
+                session_file.write_text(xml_content)
 
             selector = NodeSelector(random_seed=42)
 
-            # Get all nodes to verify prompts
+            # Get one node from each file
             selected = selector.select_nodes_for_examples(sessions_dir, 3)
+            assert len(selected) == 3
 
-            # Build mapping of node_id to prompt
-            prompt_map = {}
+            # Verify we get one node from each file
+            filenames = {filename for filename, _, _ in selected}
+            assert len(filenames) == 3  # Three different files
+
+            # Verify prompt text format
             for _, node_id, prompt_text in selected:
-                prompt_map[node_id] = prompt_text
-
-            # Verify correct prompts
-            if 0 in prompt_map:
-                assert prompt_map[0] == "This is the root prompt"
-            if 1 in prompt_map:
-                assert prompt_map[1] == "This is child 1 prompt"
-            if 2 in prompt_map:
-                assert prompt_map[2] == "This is child 2 prompt"
+                assert prompt_text.startswith("This is prompt")
+                assert node_id == 0  # All sessions should have root ID 0
 
     def test_handles_malformed_xml_gracefully(self):
         """Test appropriate error handling for malformed XML."""
@@ -216,6 +205,4 @@ class TestNodeSelector:
             selector = NodeSelector()
             selected = selector.select_nodes_for_examples(sessions_dir, 2)
 
-            # Verify filenames are from our list
-            for filename, _, _ in selected:
-                assert filename in filenames
+            assert set(filenames) == set(filename for filename, _, _ in selected)

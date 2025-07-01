@@ -1,10 +1,9 @@
 """Session and event classes for representing session data as Python objects."""
 
 from dataclasses import dataclass, field
-from typing import List, Type, Union, Optional
+from typing import List, Type
 from abc import ABC, abstractmethod
 import xml.etree.ElementTree as ET
-from enum import Enum
 
 FAILED_STR = "FAILED"
 
@@ -27,6 +26,18 @@ class PromptEvent(SessionEvent):
 
     def to_xml_element(self) -> ET.Element:
         elem = ET.Element("prompt")
+        elem.text = self.text
+        return elem
+
+
+@dataclass
+class NotesEvent(SessionEvent):
+    """Represents a notes event in a session."""
+
+    text: str
+
+    def to_xml_element(self) -> ET.Element:
+        elem = ET.Element("notes")
         elem.text = self.text
         return elem
 
@@ -114,6 +125,8 @@ class Session:
             text = elem.text or ""
             if elem.tag == "prompt":
                 session.add_event(PromptEvent(text=text))
+            elif elem.tag == "notes":
+                session.add_event(NotesEvent(text=text))
             elif elem.tag == "ask":
                 session.add_event(AskEvent(text=text))
             elif elem.tag == "response":
@@ -148,6 +161,16 @@ class Session:
             raise ValueError(f"Last event is not a {event_type.__name__} event")
         return event.text
 
+    def get_prompt_text(self) -> str:
+        """Get the text of the first event of the given type."""
+        if self.is_failed:
+            raise ValueError("Cannot get prompt text for a failed session")
+        if not self.events:
+            raise ValueError("No events in session")
+        if not isinstance(self.events[0], PromptEvent):
+            raise ValueError("First event is not a prompt event")
+        return self.events[0].text
+
     def get_ask_text(self) -> str:
         """Get the text of the last event, which should be an ask event.
 
@@ -171,6 +194,8 @@ class Session:
             # Create new event instances
             if isinstance(event, PromptEvent):
                 new_session.add_event(PromptEvent(text=event.text))
+            elif isinstance(event, NotesEvent):
+                new_session.add_event(NotesEvent(text=event.text))
             elif isinstance(event, AskEvent):
                 new_session.add_event(AskEvent(text=event.text))
             elif isinstance(event, ResponseEvent):

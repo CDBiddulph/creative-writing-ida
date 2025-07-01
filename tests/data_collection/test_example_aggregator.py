@@ -3,7 +3,6 @@
 import tempfile
 from pathlib import Path
 import xml.etree.ElementTree as ET
-import shutil
 import pytest
 
 from src.data_collection.example_aggregator import ExampleAggregator
