@@ -1,7 +1,6 @@
 """Factory function for creating session generators."""
 
 from src.config import resolve_model_name, resolve_model_type
-from src.session_generator.claude_base import ClaudeBaseSessionGenerator
 from src.session_generator.claude_chat import ClaudeChatSessionGenerator
 from src.session_generator.session_generator import SessionGenerator
 
@@ -32,17 +31,10 @@ def get_session_generator(
     """
     model = resolve_model_name(model)
     model_type = resolve_model_type(model)
-    if model_type == "base":
-        return ClaudeBaseSessionGenerator(
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            leaf_readme_path=leaf_readme_path,
-            parent_readme_path=parent_readme_path,
-            leaf_examples_xml_path=leaf_examples_xml_path,
-            parent_examples_xml_path=parent_examples_xml_path,
-        )
-    elif model_type == "chat":
+
+    # Only support chat models now
+    # In the future, we may bring back ClaudeBaseSessionGenerator
+    if model_type == "chat":
         return ClaudeChatSessionGenerator(
             model=model,
             max_tokens=max_tokens,
@@ -53,4 +45,4 @@ def get_session_generator(
             parent_examples_xml_path=parent_examples_xml_path,
         )
     else:
-        raise ValueError(f"Unknown model type: {model_type}")
+        raise ValueError(f"Only chat models are supported, got: {model_type}")
