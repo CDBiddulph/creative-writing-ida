@@ -106,14 +106,17 @@ class TestClaudeBaseSessionGenerator(unittest.TestCase):
         mock_response.stop_sequence = "</submit>"
         mock_client.completions.create.return_value = mock_response
 
-        result = self.generator.generate_leaf("Write a story about robots", session_id=1)
+        result = self.generator.generate_leaf(
+            "Write a story about robots", session_id=1
+        )
 
         # Verify result is a Session object
         from src.session import Session
+
         self.assertIsInstance(result, Session)
         self.assertEqual(result.session_id, 1)
         self.assertFalse(result.is_failed)
-        
+
         # Verify the Session can be converted to expected XML
         expected_xml = "<session>\n<prompt>Write a story about robots</prompt>\n<submit>Generated story content</submit>\n</session>"
         self.assertEqual(result.to_xml(), expected_xml)
@@ -131,14 +134,17 @@ class TestClaudeBaseSessionGenerator(unittest.TestCase):
         mock_response.stop_sequence = "</ask>"
         mock_client.completions.create.return_value = mock_response
 
-        result = self.generator.generate_parent("Create a story about adventure", session_id=0)
+        result = self.generator.generate_parent(
+            "Create a story about adventure", session_id=0
+        )
 
         # Verify result is a Session object
         from src.session import Session
+
         self.assertIsInstance(result, Session)
         self.assertEqual(result.session_id, 0)
         self.assertFalse(result.is_failed)
-        
+
         # Verify the Session can be converted to expected XML
         # The mock response includes 'notes>Some notes</notes>\n<ask>What color?' so we expect both notes and ask
         result_xml = result.to_xml(include_closing_tag=False)
@@ -155,10 +161,13 @@ class TestClaudeBaseSessionGenerator(unittest.TestCase):
         mock_anthropic.return_value = mock_client
         mock_client.completions.create.side_effect = Exception("API Error")
 
-        result = self.generator.generate_leaf("Write a story", session_id=1, max_retries=1)
+        result = self.generator.generate_leaf(
+            "Write a story", session_id=1, max_retries=1
+        )
 
         # Should return failed Session rather than raising exception
         from src.session import Session
+
         self.assertIsInstance(result, Session)
         self.assertTrue(result.is_failed)
         self.assertEqual(result.session_id, 1)
@@ -175,9 +184,10 @@ class TestClaudeBaseSessionGenerator(unittest.TestCase):
         )
 
         result = generator.generate_leaf("Write a story", session_id=1)
-        
+
         # Should return failed Session rather than raising exception
         from src.session import Session
+
         self.assertIsInstance(result, Session)
         self.assertTrue(result.is_failed)
 
@@ -188,13 +198,16 @@ class TestClaudeBaseSessionGenerator(unittest.TestCase):
         mock_client = MagicMock()
         mock_anthropic.return_value = mock_client
         mock_response = MagicMock()
-        mock_response.completion = "notes>Good response!</notes>\n<submit>Final story content"
+        mock_response.completion = (
+            "notes>Good response!</notes>\n<submit>Final story content"
+        )
         mock_response.stop_reason = "stop_sequence"
         mock_response.stop_sequence = "</submit>"
         mock_client.completions.create.return_value = mock_response
 
         # Create an initial session to continue
         from src.session import Session, PromptEvent, AskEvent, ResponseEvent
+
         current_session = Session(session_id=0)
         current_session.add_event(PromptEvent(text="Write a story"))
         current_session.add_event(AskEvent(text="What genre?"))

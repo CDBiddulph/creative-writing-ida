@@ -93,10 +93,10 @@ class Session:
         for event in self.events:
             elem = event.to_xml_element()
             lines.append(f"<{elem.tag}>{elem.text}</{elem.tag}>")
-        
+
         if include_closing_tag:
             lines.append("</session>")
-        
+
         return "\n".join(lines)
 
     @classmethod
@@ -105,7 +105,7 @@ class Session:
         # Handle partial XML by adding closing tag if needed
         if not xml_string.strip().endswith("</session>"):
             xml_string = xml_string + "\n</session>"
-            
+
         root = ET.fromstring(xml_string)
 
         session = cls(session_id=session_id)
@@ -163,7 +163,6 @@ class Session:
             ValueError: If the last event is not a submit event
         """
         return self._get_last_event_text(SubmitEvent)
-
 
     def copy(self) -> "Session":
         """Create a copy of this session."""

@@ -63,15 +63,21 @@ class XmlValidator:
                 # This is complete XML - validate as leaf
                 # Check if all found tags are allowed for leaf
                 if not found_tags.issubset(self.LEAF_ALLOWED_TAGS):
-                    raise ValueError(f"Invalid tags for leaf: {found_tags}. Allowed tags: {self.LEAF_ALLOWED_TAGS}")
+                    raise ValueError(
+                        f"Invalid tags for leaf: {found_tags}. Allowed tags: {self.LEAF_ALLOWED_TAGS}"
+                    )
 
                 # For complete leaf nodes, must end with submit
                 if tag_sequence[-1] != "submit":
-                    raise ValueError(f"Complete leaf XML must end with 'submit': {session_xml}")
+                    raise ValueError(
+                        f"Complete leaf XML must end with 'submit': {session_xml}"
+                    )
 
                 # For complete leaf nodes, both prompt and submit are required
                 if "prompt" not in found_tags or "submit" not in found_tags:
-                    raise ValueError(f"Leaf node missing prompt or submit: {session_xml}")
+                    raise ValueError(
+                        f"Leaf node missing prompt or submit: {session_xml}"
+                    )
 
                 return False  # Complete and valid
             else:
@@ -109,7 +115,9 @@ class XmlValidator:
 
             # Check if all found tags are allowed
             if not found_tags.issubset(self.PARENT_ALLOWED_TAGS):
-                raise ValueError(f"Invalid tags: {found_tags}. Allowed tags: {self.PARENT_ALLOWED_TAGS}")
+                raise ValueError(
+                    f"Invalid tags: {found_tags}. Allowed tags: {self.PARENT_ALLOWED_TAGS}"
+                )
 
             # Rule 1: <prompt> must be first
             if tag_sequence[0] != "prompt":
@@ -119,7 +127,9 @@ class XmlValidator:
             if is_complete_xml:
                 # This is complete XML - check if it ends with submit
                 if tag_sequence[-1] != "submit":
-                    raise ValueError(f"Complete XML must end with 'submit': {session_xml}")
+                    raise ValueError(
+                        f"Complete XML must end with 'submit': {session_xml}"
+                    )
 
                 # Validate ask/response pairing for complete XML
                 if not self._validate_ask_response_pairing_or_fail(tag_sequence):
@@ -134,7 +144,9 @@ class XmlValidator:
 
                 # Cannot have submit in partial XML
                 if "submit" in found_tags:
-                    raise ValueError(f"Partial XML cannot contain submit: {session_xml}")
+                    raise ValueError(
+                        f"Partial XML cannot contain submit: {session_xml}"
+                    )
 
                 # Validate ask/response pairing up to the last ask
                 if not self._validate_ask_response_pairing_or_fail(tag_sequence[:-1]):
@@ -173,10 +185,10 @@ class XmlValidator:
         # Rule: Partial validation is not allowed for leaf nodes
         if is_leaf and is_partial:
             return False
-            
+
         try:
             is_xml_partial = self.get_is_xml_partial_or_fail(session_xml, is_leaf)
-            
+
             # Check if the partial/complete status matches what was requested
             if is_partial and not is_xml_partial:
                 # Requested partial but XML is complete
@@ -184,9 +196,9 @@ class XmlValidator:
             elif not is_partial and is_xml_partial:
                 # Requested complete but XML is partial
                 return False
-            
+
             return True
-            
+
         except ValueError as e:
             logging.error("XML validation failed: %s", str(e))
             return False

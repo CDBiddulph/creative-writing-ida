@@ -53,18 +53,18 @@ class TestPlaceholderReplacer(unittest.TestCase):
         """Test replacement when text is just a single placeholder."""
         text = "$PROMPT"
         replacement_map = {"$PROMPT": "Write a story"}
-        
+
         result = self.replacer.replace_placeholders(text, replacement_map)
         self.assertEqual(result, "Write a story")
-        
+
     def test_replace_single_placeholder_with_whitespace(self):
         """Test single placeholder with surrounding whitespace."""
         text = "  $RESPONSE1  "
         replacement_map = {"$RESPONSE1": "Some response text"}
-        
+
         result = self.replacer.replace_placeholders(text, replacement_map)
         self.assertEqual(result, "Some response text")
-        
+
     def test_replace_placeholders_with_context(self):
         """Test replacement of placeholders with context naming."""
         text = "Based on $PROMPT, combine $RESPONSE1 with $RESPONSE2."
@@ -125,12 +125,12 @@ Playful kittens
 
 Combine $CONTEXT1 with $CONTEXT2 and $CONTEXT3"""
         self.assertEqual(result, expected)
-        
+
     def test_process_text_single_placeholder(self):
         """Test processing text that is just a single placeholder."""
         session = Session(session_id=0)
         session.add_event(PromptEvent(text="Write about cats"))
-        
+
         text = "$PROMPT"
         result = self.replacer.process_text(text, session)
         self.assertEqual(result, "Write about cats")

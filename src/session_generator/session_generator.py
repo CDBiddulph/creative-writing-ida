@@ -40,17 +40,23 @@ class SessionGenerator(ABC):
         self.parent_examples_xml_path = parent_examples_xml_path
 
     @abstractmethod
-    def generate_leaf(self, prompt: str, session_id: int, max_retries: int = 3) -> Session:
+    def generate_leaf(
+        self, prompt: str, session_id: int, max_retries: int = 3
+    ) -> Session:
         """Generate a leaf session."""
         pass
 
     @abstractmethod
-    def generate_parent(self, prompt: str, session_id: int, max_retries: int = 3) -> Session:
+    def generate_parent(
+        self, prompt: str, session_id: int, max_retries: int = 3
+    ) -> Session:
         """Generate a parent session."""
         pass
 
     @abstractmethod
-    def continue_parent(self, current_session: Session, max_retries: int = 3) -> Session:
+    def continue_parent(
+        self, current_session: Session, max_retries: int = 3
+    ) -> Session:
         """Continue generating a parent session from existing Session."""
         pass
 

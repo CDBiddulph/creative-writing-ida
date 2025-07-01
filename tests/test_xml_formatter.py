@@ -259,7 +259,7 @@ class TestXmlFormatter(unittest.TestCase):
         root = TreeNode(session_id=0, prompt="Write about cats", depth=0)
         child1 = TreeNode(session_id=1, prompt="Give ideas", depth=1)
         child2 = TreeNode(session_id=2, prompt="Expand on idea", depth=1)
-        
+
         # Root has placeholders in submit
         root.session_xml = """<session>
             <prompt>Write about cats</prompt>
@@ -269,29 +269,29 @@ class TestXmlFormatter(unittest.TestCase):
             <response>Detailed cat story</response>
             <submit>Story based on $PROMPT using $RESPONSE1 and $RESPONSE2</submit>
         </session>"""
-        
+
         child1.session_xml = """<session>
             <prompt>Give ideas</prompt>
             <submit>Fluffy cats playing</submit>
         </session>"""
-        
+
         child2.session_xml = """<session>
             <prompt>Expand on idea</prompt>
             <submit>Detailed cat story</submit>
         </session>"""
-        
+
         root.add_child(child1)
         root.add_child(child2)
-        
+
         result = self.formatter.format_tree_xml(root)
-        
+
         # Should have final-response tag
         self.assertIn("<final-response>", result)
         self.assertIn("</final-response>", result)
-        
+
         # Final response should have placeholders resolved with context format
         self.assertIn("Story based on $CONTEXT1 using $CONTEXT2 and $CONTEXT3", result)
-        
+
         # Final response should be first element after sessions tag
         sessions_start = result.find("<sessions>")
         final_response_start = result.find("<final-response>")
@@ -303,12 +303,12 @@ class TestXmlFormatter(unittest.TestCase):
         """Test that no final-response tag is added for failed sessions."""
         root = TreeNode(session_id=0, prompt="Test task", depth=0)
         root.session_xml = "FAILED"
-        
+
         result = self.formatter.format_tree_xml(root)
-        
+
         # Should not have final-response tag
         self.assertNotIn("<final-response>", result)
-        
+
     def test_format_tree_no_final_response_for_incomplete(self):
         """Test that no final-response tag is added for incomplete sessions."""
         root = TreeNode(session_id=0, prompt="Test task", depth=0)
@@ -316,9 +316,9 @@ class TestXmlFormatter(unittest.TestCase):
             <prompt>Test task</prompt>
             <ask>Need help</ask>
         </session>"""
-        
+
         result = self.formatter.format_tree_xml(root)
-        
+
         # Should not have final-response tag
         self.assertNotIn("<final-response>", result)
 
@@ -327,7 +327,7 @@ class TestXmlFormatter(unittest.TestCase):
         root = TreeNode(session_id=0, prompt="Create a recipe", depth=0)
         child1 = TreeNode(session_id=1, prompt="List ingredients", depth=1)
         child2 = TreeNode(session_id=2, prompt="Describe steps", depth=1)
-        
+
         # Root has placeholders throughout
         root.session_xml = """<session>
             <prompt>Create a recipe</prompt>
@@ -337,22 +337,22 @@ class TestXmlFormatter(unittest.TestCase):
             <response>Slice and layer the ingredients</response>
             <submit>Recipe for $PROMPT: Use $RESPONSE1. Method: $RESPONSE2</submit>
         </session>"""
-        
+
         child1.session_xml = """<session>
             <prompt>For Create a recipe, what ingredients should we use?</prompt>
             <submit>Tomatoes, basil, mozzarella</submit>
         </session>"""
-        
+
         child2.session_xml = """<session>
             <prompt>Using Tomatoes, basil, mozzarella, how should we prepare this?</prompt>
             <submit>Slice and layer the ingredients</submit>
         </session>"""
-        
+
         root.add_child(child1)
         root.add_child(child2)
-        
+
         result = self.formatter.format_tree_xml(root)
-        
+
         # Final response should have resolved placeholders with context format
         expected_final_response = """<final-response>CONTEXT1:
 Create a recipe
@@ -365,20 +365,31 @@ Slice and layer the ingredients
 
 Recipe for $CONTEXT1: Use $CONTEXT2. Method: $CONTEXT3</final-response>"""
         self.assertIn(expected_final_response, result)
-        
+
         # Original session should still have placeholders
         self.assertIn("<ask>For $PROMPT, what ingredients should we use?</ask>", result)
-        self.assertIn("<ask>Using $RESPONSE1, how should we prepare this?</ask>", result)
-        self.assertIn("<submit>Recipe for $PROMPT: Use $RESPONSE1. Method: $RESPONSE2</submit>", result)
-        
+        self.assertIn(
+            "<ask>Using $RESPONSE1, how should we prepare this?</ask>", result
+        )
+        self.assertIn(
+            "<submit>Recipe for $PROMPT: Use $RESPONSE1. Method: $RESPONSE2</submit>",
+            result,
+        )
+
         # Children should have resolved prompts (no placeholders)
-        self.assertIn("<prompt>For Create a recipe, what ingredients should we use?</prompt>", result)
-        self.assertIn("<prompt>Using Tomatoes, basil, mozzarella, how should we prepare this?</prompt>", result)
+        self.assertIn(
+            "<prompt>For Create a recipe, what ingredients should we use?</prompt>",
+            result,
+        )
+        self.assertIn(
+            "<prompt>Using Tomatoes, basil, mozzarella, how should we prepare this?</prompt>",
+            result,
+        )
 
     def test_format_tree_complex_placeholder_combinations(self):
         """Test edge cases with multiple placeholders in various combinations."""
         root = TreeNode(session_id=0, prompt="Test task", depth=0)
-        
+
         # Test with multiple placeholders in one place
         root.session_xml = """<session>
             <prompt>Test task</prompt>
@@ -390,9 +401,9 @@ Recipe for $CONTEXT1: Use $CONTEXT2. Method: $CONTEXT3</final-response>"""
             <response>Third response</response>
             <submit>$RESPONSE1 $RESPONSE1 and $RESPONSE2 plus $RESPONSE3 for $PROMPT</submit>
         </session>"""
-        
+
         result = self.formatter.format_tree_xml(root)
-        
+
         # Should handle repeated placeholders and multiple responses with context format
         expected_final_response = """<final-response>CONTEXT1:
 Test task

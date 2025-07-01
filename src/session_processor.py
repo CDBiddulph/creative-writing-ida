@@ -9,9 +9,7 @@ from .placeholder_replacer import PlaceholderReplacer
 class SessionProcessor:
     """Handles incremental processing of sessions with recursive tree building."""
 
-    def __init__(
-        self, session_generator, max_depth: int, max_retries: int = 3
-    ):
+    def __init__(self, session_generator, max_depth: int, max_retries: int = 3):
         """
         Initialize SessionProcessor with dependencies and constraints.
 
@@ -47,7 +45,9 @@ class SessionProcessor:
         self.next_session_id = 0
         return self._process_new_node(prompt, 0)
 
-    def _process_new_node(self, prompt: str, depth: int, parent_session: Session = None) -> TreeNode:
+    def _process_new_node(
+        self, prompt: str, depth: int, parent_session: Session = None
+    ) -> TreeNode:
         """
         Process a single node recursively.
 
@@ -73,12 +73,16 @@ class SessionProcessor:
 
         if is_leaf:
             # Generate leaf content
-            session = self.session_generator.generate_leaf(prompt, node.session_id, self.max_retries)
+            session = self.session_generator.generate_leaf(
+                prompt, node.session_id, self.max_retries
+            )
             node.session = session
             return node
 
         # Generate initial parent content
-        session = self.session_generator.generate_parent(prompt, node.session_id, self.max_retries)
+        session = self.session_generator.generate_parent(
+            prompt, node.session_id, self.max_retries
+        )
         return self._continue_parent_node(node, session=session)
 
     def _continue_parent_node(self, node: TreeNode, session: Session) -> TreeNode:
@@ -108,7 +112,9 @@ class SessionProcessor:
                     f"Expected ask event but found none in session {session.session_id}: {e}"
                 )
 
-            new_child_node = self._process_new_node(last_ask_text, node.depth + 1, parent_session=session)
+            new_child_node = self._process_new_node(
+                last_ask_text, node.depth + 1, parent_session=session
+            )
             node.children.append(new_child_node)
 
             # Get response from child and add to session
@@ -117,7 +123,6 @@ class SessionProcessor:
 
             # Call continue_parent to get the next part of the session
             session = self.session_generator.continue_parent(session, self.max_retries)
-
 
     def _get_submit_text(self, node: TreeNode) -> str:
         """Get the submission text from a node with placeholders resolved."""

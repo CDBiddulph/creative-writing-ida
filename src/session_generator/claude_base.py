@@ -14,7 +14,9 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
         super().__init__(*args, **kwargs)
         self.xml_validator = XmlValidator()
 
-    def generate_leaf(self, prompt: str, session_id: int, max_retries: int = 3) -> Session:
+    def generate_leaf(
+        self, prompt: str, session_id: int, max_retries: int = 3
+    ) -> Session:
         """Generate a leaf session using Claude base model completions API."""
         try:
             # Load content
@@ -22,13 +24,20 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
             examples_xml = self._load_examples_xml(self.leaf_examples_xml_path)
 
             return self._generate_session_with_validation(
-                prompt, session_id, readme_content, examples_xml, is_leaf=True, max_retries=max_retries
+                prompt,
+                session_id,
+                readme_content,
+                examples_xml,
+                is_leaf=True,
+                max_retries=max_retries,
             )
         except Exception as e:
             logging.warning(f"Failed to load files for leaf generation: {e}")
             return Session(session_id=session_id, is_failed=True)
 
-    def generate_parent(self, prompt: str, session_id: int, max_retries: int = 3) -> Session:
+    def generate_parent(
+        self, prompt: str, session_id: int, max_retries: int = 3
+    ) -> Session:
         """Generate a parent session using Claude base model completions API."""
         try:
             # Load content
@@ -36,13 +45,20 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
             examples_xml = self._load_examples_xml(self.parent_examples_xml_path)
 
             return self._generate_session_with_validation(
-                prompt, session_id, readme_content, examples_xml, is_leaf=False, max_retries=max_retries
+                prompt,
+                session_id,
+                readme_content,
+                examples_xml,
+                is_leaf=False,
+                max_retries=max_retries,
             )
         except Exception as e:
             logging.warning(f"Failed to load files for parent generation: {e}")
             return Session(session_id=session_id, is_failed=True)
 
-    def continue_parent(self, current_session: Session, max_retries: int = 3) -> Session:
+    def continue_parent(
+        self, current_session: Session, max_retries: int = 3
+    ) -> Session:
         """Continue generating a parent session from existing Session."""
         try:
             # Load content
@@ -72,46 +88,64 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
                     stop_sequences=self.STOP_SEQUENCES,
                     temperature=self.temperature,
                 )
-                
+
                 # Combine current XML with continuation
                 continuation_text = "\n<" + response.text + response.stop_sequence
-                
+
                 # If the response ends with </submit>, add </session> to close it
                 if response.stop_sequence == "</submit>":
                     continuation_text += "\n</session>"
-                
+
                 # Get complete session XML
                 complete_xml = current_xml + continuation_text
-                
+
                 # Validate the XML
-                self.xml_validator.get_is_xml_partial_or_fail(complete_xml, is_leaf=False)
-                
+                self.xml_validator.get_is_xml_partial_or_fail(
+                    complete_xml, is_leaf=False
+                )
+
                 # Convert to Session object
                 return Session.from_xml(complete_xml, current_session.session_id)
-                
+
             except Exception as e:
-                logging.warning(f"Attempt {attempt + 1} failed for continue_parent: {e}")
+                logging.warning(
+                    f"Attempt {attempt + 1} failed for continue_parent: {e}"
+                )
                 if attempt == max_retries:  # Last attempt
                     # Return failed session
-                    failed_session = Session(session_id=current_session.session_id, is_failed=True)
+                    failed_session = Session(
+                        session_id=current_session.session_id, is_failed=True
+                    )
                     return failed_session
 
     def _generate_session_with_validation(
-        self, prompt: str, session_id: int, readme_content: str, examples_xml: str, is_leaf: bool, max_retries: int
+        self,
+        prompt: str,
+        session_id: int,
+        readme_content: str,
+        examples_xml: str,
+        is_leaf: bool,
+        max_retries: int,
     ) -> Session:
         """Generate session with validation and retry logic."""
         for attempt in range(max_retries + 1):
             try:
-                xml_content = self._generate_session_xml(prompt, readme_content, examples_xml)
-                
+                xml_content = self._generate_session_xml(
+                    prompt, readme_content, examples_xml
+                )
+
                 # Validate the XML
-                self.xml_validator.get_is_xml_partial_or_fail(xml_content, is_leaf=is_leaf)
-                
+                self.xml_validator.get_is_xml_partial_or_fail(
+                    xml_content, is_leaf=is_leaf
+                )
+
                 # Convert to Session object
                 return Session.from_xml(xml_content, session_id)
-                
+
             except Exception as e:
-                logging.warning(f"Attempt {attempt + 1} failed for {'leaf' if is_leaf else 'parent'}: {e}")
+                logging.warning(
+                    f"Attempt {attempt + 1} failed for {'leaf' if is_leaf else 'parent'}: {e}"
+                )
                 if attempt == max_retries:  # Last attempt
                     # Return failed session
                     failed_session = Session(session_id=session_id, is_failed=True)
@@ -136,14 +170,14 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
             stop_sequences=self.STOP_SEQUENCES,
             temperature=self.temperature,
         )
-        
+
         # Build complete XML
         result = f"{session_xml_start}{response.text}{response.stop_sequence}"
-        
+
         # Only add </session> if we ended with </submit>
         if response.stop_sequence == "</submit>":
             result += "\n</session>"
-        
+
         return result
 
 

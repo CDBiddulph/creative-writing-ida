@@ -75,7 +75,7 @@ class TestSessionGenerator:
                     output_dir.mkdir(parents=True, exist_ok=True)
                     output_file = output_dir / filename
                     output_file.write_text(xml_content)
-                    
+
                     return filename
 
                 mock_runner.run.side_effect = run_and_create_file
@@ -116,20 +116,22 @@ class TestSessionGenerator:
                 def tracked_run(prompt):
                     calls_made.append(prompt)
                     filename = "output.xml"
-                    
+
                     # Create the actual file in the output directory
                     output_dir = Path(config.output_dir)
                     output_dir.mkdir(parents=True, exist_ok=True)
                     output_file = output_dir / filename
-                    output_file.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+                    output_file.write_text(
+                        f"""<?xml version="1.0" encoding="UTF-8"?>
 <sessions>
   <session>
     <id>0</id>
     <prompt>{prompt}</prompt>
     <submit>Generated response</submit>
   </session>
-</sessions>""")
-                    
+</sessions>"""
+                    )
+
                     return filename
 
                 runner.run = tracked_run
@@ -435,19 +437,21 @@ class TestSessionGenerator:
                 def write_file(prompt):
                     # Simulate what TreeRunner would do - save to output directory
                     filename = "test_output.xml"
-                    
+
                     # Create the file in the TreeRunner's output directory
                     output_dir = Path(config.output_dir)
                     output_dir.mkdir(parents=True, exist_ok=True)
                     output_file = output_dir / filename
-                    output_file.write_text(f"""<?xml version="1.0" encoding="UTF-8"?>
+                    output_file.write_text(
+                        f"""<?xml version="1.0" encoding="UTF-8"?>
 <sessions>
   <session>
     <id>0</id>
     <prompt>{prompt}</prompt>
     <submit>Generated response</submit>
   </session>
-</sessions>""")
+</sessions>"""
+                    )
 
                     return filename
 
@@ -505,40 +509,39 @@ class TestSessionGenerator:
             ):
                 generator.generate_sessions_for_iteration(iter_path, exp_path, 0)
 
-    @pytest.mark.parametrize("prompt_text,expected_filename_part", [
-        # Basic alphanumeric text
-        ("Simple test prompt", "simple-test-prompt"),
-        
-        # Special characters removal
-        ("Hello! How are you? I'm fine.", "hello-how-are-you-im-fine"),
-        
-        # Multiple whitespace consolidation (no newlines as they break prompt file format)
-        ("Multiple    spaces\t\tand  tabs", "multiple-spaces-and-tabs"),
-        
-        # Leading/trailing whitespace removal
-        ("   trimmed text   ", "trimmed-text"),
-        
-        # Numbers and underscores (underscores should be removed)
-        ("Test_123 with numbers456", "test123-with-numbers456"),
-        
-        # Unicode characters removal
-        ("Café naïve résumé", "caf-nave-rsum"),
-        
-        # Exactly 30 characters (no truncation needed)
-        ("This is exactly thirty chars!", "this-is-exactly-thirty-chars"),
-        
-        # Longer than 30 characters (should be truncated)
-        ("This is a very long prompt that should definitely be truncated", "this-is-a-very-long-prompt-tha"),
-        
-        # Very short text
-        ("Hi", "hi"),
-        
-        # Mixed case with complex punctuation
-        ("The QUICK brown fox's... journey!", "the-quick-brown-foxs-journey"),
-        
-        # Text with spaces at ends that needs truncation
-        ("  start with spaces, end with spaces  ", "start-with-spaces-end-with-spa"),
-    ])
+    @pytest.mark.parametrize(
+        "prompt_text,expected_filename_part",
+        [
+            # Basic alphanumeric text
+            ("Simple test prompt", "simple-test-prompt"),
+            # Special characters removal
+            ("Hello! How are you? I'm fine.", "hello-how-are-you-im-fine"),
+            # Multiple whitespace consolidation (no newlines as they break prompt file format)
+            ("Multiple    spaces\t\tand  tabs", "multiple-spaces-and-tabs"),
+            # Leading/trailing whitespace removal
+            ("   trimmed text   ", "trimmed-text"),
+            # Numbers and underscores (underscores should be removed)
+            ("Test_123 with numbers456", "test123-with-numbers456"),
+            # Unicode characters removal
+            ("Café naïve résumé", "caf-nave-rsum"),
+            # Exactly 30 characters (no truncation needed)
+            ("This is exactly thirty chars!", "this-is-exactly-thirty-chars"),
+            # Longer than 30 characters (should be truncated)
+            (
+                "This is a very long prompt that should definitely be truncated",
+                "this-is-a-very-long-prompt-tha",
+            ),
+            # Very short text
+            ("Hi", "hi"),
+            # Mixed case with complex punctuation
+            ("The QUICK brown fox's... journey!", "the-quick-brown-foxs-journey"),
+            # Text with spaces at ends that needs truncation
+            (
+                "  start with spaces, end with spaces  ",
+                "start-with-spaces-end-with-spa",
+            ),
+        ],
+    )
     def test_filename_sanitization_via_sample_sessions(
         self, test_config, mock_tree_runner, prompt_text, expected_filename_part
     ):
@@ -548,78 +551,90 @@ class TestSessionGenerator:
             prompts_file = Path(tmpdir) / "prompts.txt"
             prompts_file.write_text(prompt_text)
             test_config.writing_prompts_path = str(prompts_file)
-            
+
             # Set up iteration directory
             iter_path = Path(tmpdir) / "iteration_0"
             iter_path.mkdir()
             (iter_path / "sample-sessions").mkdir()
             (iter_path / "leaf-sessions").mkdir()
-            
+
             examples_dir = iter_path / "examples"
             examples_dir.mkdir()
             (examples_dir / "leaf_examples.xml").write_text("<sessions></sessions>")
             (examples_dir / "parent_examples.xml").write_text("<sessions></sessions>")
-            
+
             generator = SessionGenerator(test_config)
             exp_path = Path(tmpdir) / "experiment"
             exp_path.mkdir()
-            
+
             # Set to generate at least one sample session (which requires leaf or parent examples)
             test_config.leaf_examples_per_iteration = 1
-            
+
             # Generate sessions
             generator.generate_sessions_for_iteration(iter_path, exp_path, 0)
-            
+
             # Check the actual filename created
             sample_files = list((iter_path / "sample-sessions").glob("*.xml"))
-            assert len(sample_files) == 1, f"Expected 1 sample file, got {len(sample_files)}"
-            
+            assert (
+                len(sample_files) == 1
+            ), f"Expected 1 sample file, got {len(sample_files)}"
+
             actual_filename = sample_files[0].stem  # Remove .xml extension
             # Filename format should be: "{prompt_index}-{sanitized_prompt}"
             # The prompt index should be 1 (first prompt)
-            assert actual_filename.startswith("1-"), f"Expected filename to start with '1-', got {actual_filename}"
-            
-            sanitized_part = actual_filename[2:]  # Remove "1-" prefix
-            assert sanitized_part == expected_filename_part, f"Expected '{expected_filename_part}', got '{sanitized_part}'"
-            
-            # Verify length constraint (total sanitized part should be <= 30)
-            assert len(sanitized_part) <= 30, f"Sanitized part too long: {len(sanitized_part)} chars"
+            assert actual_filename.startswith(
+                "1-"
+            ), f"Expected filename to start with '1-', got {actual_filename}"
 
-    def test_special_characters_fallback_to_unknown(self, test_config, mock_tree_runner):
+            sanitized_part = actual_filename[2:]  # Remove "1-" prefix
+            assert (
+                sanitized_part == expected_filename_part
+            ), f"Expected '{expected_filename_part}', got '{sanitized_part}'"
+
+            # Verify length constraint (total sanitized part should be <= 30)
+            assert (
+                len(sanitized_part) <= 30
+            ), f"Sanitized part too long: {len(sanitized_part)} chars"
+
+    def test_special_characters_fallback_to_unknown(
+        self, test_config, mock_tree_runner
+    ):
         """Test that prompts with only special characters fall back to 'unknown' in filename."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create prompts file with special characters only
             prompts_file = Path(tmpdir) / "prompts.txt"
             prompts_file.write_text("###")  # Only special characters (XML-safe)
             test_config.writing_prompts_path = str(prompts_file)
-            
+
             # Set up iteration directory
             iter_path = Path(tmpdir) / "iteration_0"
             iter_path.mkdir()
             (iter_path / "sample-sessions").mkdir()
             (iter_path / "leaf-sessions").mkdir()
-            
+
             examples_dir = iter_path / "examples"
             examples_dir.mkdir()
             (examples_dir / "leaf_examples.xml").write_text("<sessions></sessions>")
             (examples_dir / "parent_examples.xml").write_text("<sessions></sessions>")
-            
+
             generator = SessionGenerator(test_config)
             exp_path = Path(tmpdir) / "experiment"
             exp_path.mkdir()
-            
+
             # Set to generate at least one sample session
             test_config.leaf_examples_per_iteration = 1
-            
+
             # Generate sessions
             generator.generate_sessions_for_iteration(iter_path, exp_path, 0)
-            
+
             # Check the actual filename created
             sample_files = list((iter_path / "sample-sessions").glob("*.xml"))
             assert len(sample_files) == 1
-            
+
             actual_filename = sample_files[0].stem
             sanitized_part = actual_filename[2:]  # Remove "1-" prefix
-            
+
             # Should fallback to "unknown" when all characters are stripped
-            assert sanitized_part == "unknown", f"Expected 'unknown', got '{sanitized_part}'"
+            assert (
+                sanitized_part == "unknown"
+            ), f"Expected 'unknown', got '{sanitized_part}'"

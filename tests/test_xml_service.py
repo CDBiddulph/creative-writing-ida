@@ -36,8 +36,8 @@ class TestXmlService:
     <submit>Friendly cleaning robot</submit>
   </session>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             return Path(f.name)
 
@@ -45,7 +45,7 @@ class TestXmlService:
     def sessions_directory(self):
         """Create a directory with multiple session files."""
         tmpdir = Path(tempfile.mkdtemp())
-        
+
         # Create multiple session files
         for i in range(3):
             session_content = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -63,15 +63,17 @@ class TestXmlService:
 </sessions>"""
             session_file = tmpdir / f"{i+1}-test-prompt-{i}.xml"
             session_file.write_text(session_content)
-        
+
         return tmpdir
 
-    def test_parse_sessions_file_returns_session_objects(self, xml_service, sample_session_file):
+    def test_parse_sessions_file_returns_session_objects(
+        self, xml_service, sample_session_file
+    ):
         """Test that parse_sessions_file returns proper Session objects."""
         sessions = xml_service.parse_sessions_file(sample_session_file)
-        
+
         assert len(sessions) == 2
-        
+
         # Check first session (parent)
         session_0 = sessions[0]
         assert isinstance(session_0, Session)
@@ -81,7 +83,7 @@ class TestXmlService:
         assert isinstance(session_0.events[1], AskEvent)
         assert isinstance(session_0.events[2], ResponseEvent)
         assert isinstance(session_0.events[3], SubmitEvent)
-        
+
         # Check second session (leaf)
         session_1 = sessions[1]
         assert isinstance(session_1, Session)
@@ -90,34 +92,38 @@ class TestXmlService:
         assert isinstance(session_1.events[0], PromptEvent)
         assert isinstance(session_1.events[1], SubmitEvent)
 
-    def test_parse_session_nodes_extracts_node_info(self, xml_service, sample_session_file):
+    def test_parse_session_nodes_extracts_node_info(
+        self, xml_service, sample_session_file
+    ):
         """Test that parse_session_nodes extracts (filename, node_id, prompt) tuples."""
         nodes = xml_service.parse_session_nodes(sample_session_file)
-        
+
         assert len(nodes) == 2
-        
+
         # Check that we get tuples with correct structure
         for filename, node_id, prompt_text in nodes:
             assert filename == sample_session_file.name
             assert isinstance(node_id, int)
             assert isinstance(prompt_text, str)
             assert len(prompt_text) > 0
-        
+
         # Check specific content
         node_ids = [node_id for _, node_id, _ in nodes]
         prompts = [prompt for _, _, prompt in nodes]
-        
+
         assert 0 in node_ids
         assert 1 in node_ids
         assert "Write a story about robots" in prompts
         assert "What type of robot?" in prompts
 
-    def test_extract_session_examples_for_leaf_type(self, xml_service, sessions_directory):
+    def test_extract_session_examples_for_leaf_type(
+        self, xml_service, sessions_directory
+    ):
         """Test extracting leaf examples from session files."""
         examples = xml_service.extract_session_examples(sessions_directory, "leaf")
-        
+
         assert len(examples) == 3  # One from each file
-        
+
         for example in examples:
             assert "prompt" in example
             assert "submit" in example
@@ -147,12 +153,12 @@ class TestXmlService:
 </sessions>"""
         session_file = tmpdir / "parent-session.xml"
         session_file.write_text(parent_session_content)
-        
+
         examples = xml_service.extract_session_examples(tmpdir, "parent")
-        
+
         assert len(examples) == 1
         example = examples[0]
-        
+
         assert example["prompt"] == "Complex task"
         assert example["submit"] == "Planned approach with steps"
         assert "ask" in example
@@ -164,10 +170,10 @@ class TestXmlService:
 
     def test_parse_sessions_file_handles_malformed_xml(self, xml_service):
         """Test graceful handling of malformed XML."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write("<unclosed_tag>malformed")
             malformed_file = Path(f.name)
-        
+
         with pytest.raises(ValueError, match="XML parsing error"):
             xml_service.parse_sessions_file(malformed_file)
 
@@ -186,11 +192,11 @@ class TestXmlService:
     <submit>Response</submit>
   </session>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             file_path = Path(f.name)
-        
+
         # Should skip sessions with missing required elements
         nodes = xml_service.parse_session_nodes(file_path)
         assert len(nodes) == 0
@@ -205,16 +211,18 @@ class TestXmlService:
     <submit>FAILED</submit>
   </session>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             file_path = Path(f.name)
-        
+
         sessions = xml_service.parse_sessions_file(file_path)
         assert len(sessions) == 1
-        
+
         session = sessions[0]
-        assert session.is_failed is False  # XML parsing shouldn't automatically mark as failed
+        assert (
+            session.is_failed is False
+        )  # XML parsing shouldn't automatically mark as failed
         assert session.get_submit_text() == "FAILED"
 
     def test_validate_session_xml_integration(self, xml_service):
@@ -222,7 +230,7 @@ class TestXmlService:
         # Valid leaf session
         valid_leaf = "<session><prompt>Test</prompt><submit>Result</submit></session>"
         assert xml_service.validate_session_xml(valid_leaf, is_leaf=True)
-        
+
         # Invalid session (missing submit)
         invalid_session = "<session><prompt>Test</prompt></session>"
         assert not xml_service.validate_session_xml(invalid_session, is_leaf=True)
@@ -233,16 +241,18 @@ class TestXmlService:
         session1 = Session(session_id=0)
         session1.add_event(PromptEvent("Test prompt"))
         session1.add_event(SubmitEvent("Test result"))
-        
+
         session2 = Session(session_id=1)
         session2.add_event(PromptEvent("Child prompt"))
         session2.add_event(SubmitEvent("Child result"))
-        
+
         sessions = [session1, session2]
-        
+
         # Should be able to format sessions to XML with optional final response
-        xml_output = xml_service.format_sessions_to_xml(sessions, final_response="Final result")
-        
+        xml_output = xml_service.format_sessions_to_xml(
+            sessions, final_response="Final result"
+        )
+
         assert "<?xml version=" in xml_output
         assert "<sessions>" in xml_output
         assert "<session>" in xml_output
@@ -255,7 +265,7 @@ class TestXmlService:
     def test_extract_final_response_from_file(self, xml_service, sample_session_file):
         """Test extracting final-response content from session files."""
         final_response = xml_service.extract_final_response(sample_session_file)
-        
+
         assert final_response == "Complete story about robots"
 
     def test_extract_final_response_missing_returns_none(self, xml_service):
@@ -268,11 +278,11 @@ class TestXmlService:
     <submit>Result</submit>
   </session>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             file_path = Path(f.name)
-        
+
         final_response = xml_service.extract_final_response(file_path)
         assert final_response is None
 
@@ -284,7 +294,7 @@ class TestXmlService:
     def test_extract_session_by_id(self, xml_service, sample_session_file):
         """Test extracting a specific session by ID."""
         session = xml_service.extract_session_by_id(sample_session_file, session_id=1)
-        
+
         assert session is not None
         assert session.session_id == 1
         assert len(session.events) == 2
@@ -310,17 +320,24 @@ class TestXmlService:
     <submit>Final result</submit>
   </session>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             file_path = Path(f.name)
-        
+
         sessions = xml_service.parse_sessions_file(file_path)
         session = sessions[0]
-        
+
         # Check event order is preserved
         event_types = [type(event).__name__ for event in session.events]
-        expected_order = ['PromptEvent', 'AskEvent', 'ResponseEvent', 'AskEvent', 'ResponseEvent', 'SubmitEvent']
+        expected_order = [
+            "PromptEvent",
+            "AskEvent",
+            "ResponseEvent",
+            "AskEvent",
+            "ResponseEvent",
+            "SubmitEvent",
+        ]
         assert event_types == expected_order
 
     def test_parse_sessions_file_handles_empty_file(self, xml_service):
@@ -328,15 +345,17 @@ class TestXmlService:
         xml_content = """<?xml version="1.0" encoding="UTF-8"?>
 <sessions>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             file_path = Path(f.name)
-        
+
         sessions = xml_service.parse_sessions_file(file_path)
         assert len(sessions) == 0
 
-    def test_extract_session_examples_filters_by_max_count(self, xml_service, sessions_directory):
+    def test_extract_session_examples_filters_by_max_count(
+        self, xml_service, sessions_directory
+    ):
         """Test that extract_session_examples respects maximum count limits."""
         # Create many session files
         for i in range(10):
@@ -350,9 +369,11 @@ class TestXmlService:
 </sessions>"""
             session_file = sessions_directory / f"extra-{i}.xml"
             session_file.write_text(session_content)
-        
+
         # Extract with limit
-        examples = xml_service.extract_session_examples(sessions_directory, "leaf", max_examples=5)
+        examples = xml_service.extract_session_examples(
+            sessions_directory, "leaf", max_examples=5
+        )
         assert len(examples) == 5
 
     def test_parse_session_nodes_handles_empty_directory(self, xml_service):
@@ -365,14 +386,19 @@ class TestXmlService:
         """Test that validation properly delegates to XmlValidator."""
         valid_xml = "<session><prompt>Test</prompt><submit>Result</submit></session>"
         invalid_xml = "<session><prompt>Test</prompt></session>"  # Missing submit
-        
+
         # Should delegate to existing XmlValidator
         assert xml_service.validate_session_xml(valid_xml, is_leaf=True) == True
         assert xml_service.validate_session_xml(invalid_xml, is_leaf=True) == False
-        
+
         # Test partial validation
         partial_xml = "<session><prompt>Test</prompt><ask>Question</ask>"
-        assert xml_service.validate_session_xml(partial_xml, is_leaf=False, is_partial=True) == True
+        assert (
+            xml_service.validate_session_xml(
+                partial_xml, is_leaf=False, is_partial=True
+            )
+            == True
+        )
 
     def test_format_sessions_to_xml_includes_metadata(self, xml_service):
         """Test that formatting includes proper metadata and structure."""
@@ -382,51 +408,55 @@ class TestXmlService:
         session1.add_event(AskEvent("What approach?"))
         session1.add_event(ResponseEvent("Step by step"))
         session1.add_event(SubmitEvent("Completed task"))
-        
+
         session2 = Session(session_id=1)
         session2.add_event(PromptEvent("What approach?"))
         session2.add_event(SubmitEvent("Step by step"))
-        
+
         sessions = [session1, session2]
-        
+
         xml_output = xml_service.format_sessions_to_xml(sessions)
-        
+
         # Should include XML declaration
         assert xml_output.startswith('<?xml version="1.0" encoding="UTF-8"?>')
-        
+
         # Should have sessions root
         assert "<sessions>" in xml_output
         assert "</sessions>" in xml_output
-        
+
         # Should include session IDs
         assert "<id>0</id>" in xml_output
         assert "<id>1</id>" in xml_output
-        
+
         # Should include response-id for parent session
         assert "<response-id>1</response-id>" in xml_output
-        
+
         # Should include final-response
         assert "<final-response>" in xml_output
 
-    def test_extract_session_examples_handles_malformed_files_gracefully(self, xml_service):
+    def test_extract_session_examples_handles_malformed_files_gracefully(
+        self, xml_service
+    ):
         """Test that malformed files are skipped during example extraction."""
         tmpdir = Path(tempfile.mkdtemp())
-        
+
         # Create one good file
         good_file = tmpdir / "good.xml"
-        good_file.write_text("""<?xml version="1.0" encoding="UTF-8"?>
+        good_file.write_text(
+            """<?xml version="1.0" encoding="UTF-8"?>
 <sessions>
   <session>
     <id>0</id>
     <prompt>Good prompt</prompt>
     <submit>Good result</submit>
   </session>
-</sessions>""")
-        
+</sessions>"""
+        )
+
         # Create one malformed file
         bad_file = tmpdir / "bad.xml"
         bad_file.write_text("<unclosed>malformed")
-        
+
         # Should extract from good file, skip bad file
         examples = xml_service.extract_session_examples(tmpdir, "leaf")
         assert len(examples) == 1
@@ -451,26 +481,28 @@ class TestXmlService:
     <submit>Subtask result</submit>
   </session>
 </sessions>"""
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.xml', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(xml_content)
             file_path = Path(f.name)
-        
+
         count = xml_service.count_sessions(file_path)
         assert count == 2
 
-    def test_parse_session_nodes_extracts_from_multiple_files(self, xml_service, sessions_directory):
+    def test_parse_session_nodes_extracts_from_multiple_files(
+        self, xml_service, sessions_directory
+    ):
         """Test that parse_session_nodes works across multiple files in directory."""
         # sessions_directory fixture creates 3 files with 2 sessions each
         nodes = xml_service.parse_session_nodes(sessions_directory)
-        
+
         # Should find 6 total nodes (2 per file × 3 files)
         assert len(nodes) == 6
-        
+
         # Should have different filenames
         filenames = {node[0] for node in nodes}
         assert len(filenames) == 3  # 3 different files
-        
+
         # Should have variety of node IDs
         node_ids = {node[1] for node in nodes}
         assert 0 in node_ids
@@ -480,7 +512,8 @@ class TestXmlService:
         """Test that parent examples preserve ask/response structure."""
         tmpdir = Path(tempfile.mkdtemp())
         parent_file = tmpdir / "parent.xml"
-        parent_file.write_text("""<?xml version="1.0" encoding="UTF-8"?>
+        parent_file.write_text(
+            """<?xml version="1.0" encoding="UTF-8"?>
 <sessions>
   <session>
     <id>0</id>
@@ -495,15 +528,16 @@ class TestXmlService:
     <response>After testing</response>
     <submit>Complete workflow executed</submit>
   </session>
-</sessions>""")
-        
+</sessions>"""
+        )
+
         examples = xml_service.extract_session_examples(tmpdir, "parent")
         assert len(examples) == 1
-        
+
         example = examples[0]
         assert example["prompt"] == "Complex workflow"
         assert example["submit"] == "Complete workflow executed"
-        
+
         # Should preserve multiple asks and responses in order
         assert len(example["ask"]) == 3
         assert len(example["response"]) == 3
@@ -511,21 +545,24 @@ class TestXmlService:
         assert example["response"][0] == "Gather requirements"
         assert example["ask"][2] == "When to deploy?"
         assert example["response"][2] == "After testing"
-        
+
         # Should handle notes if present
         if "notes" in example:
             assert isinstance(example["notes"], list)
 
-    def test_parse_sessions_file_ignores_metadata_elements(self, xml_service, sample_session_file):
+    def test_parse_sessions_file_ignores_metadata_elements(
+        self, xml_service, sample_session_file
+    ):
         """Test that parsing ignores file-level metadata like final-response."""
         sessions = xml_service.parse_sessions_file(sample_session_file)
-        
+
         # Should have parsed sessions but ignored final-response and response-id elements
         assert len(sessions) == 2
-        
+
         # Sessions should not contain metadata elements like response-id
         for session in sessions:
             for event in session.events:
                 # Events should only be the core session types
-                assert isinstance(event, (PromptEvent, AskEvent, ResponseEvent, SubmitEvent))
-
+                assert isinstance(
+                    event, (PromptEvent, AskEvent, ResponseEvent, SubmitEvent)
+                )
