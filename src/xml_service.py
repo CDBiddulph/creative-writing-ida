@@ -18,7 +18,7 @@ from .session import (
     ResponseEvent,
     SubmitEvent,
 )
-from .xml_validator import XmlValidator
+from .session_validator import SessionValidator
 
 
 class XmlService:
@@ -30,7 +30,7 @@ class XmlService:
 
     def __init__(self):
         """Initialize XML service with validator."""
-        self.xml_validator = XmlValidator()
+        self.session_validator = SessionValidator()
 
     def parse_sessions_file(self, file_path: Path) -> List[Session]:
         """Parse a complete sessions XML file into Session objects.
@@ -69,23 +69,8 @@ class XmlService:
                 # Create session object
                 session = Session(session_id=session_id)
 
-                # Parse events (skip id, response-id, and notes elements)
-                for elem in session_elem:
-                    text = elem.text or ""
-                    if elem.tag in ("id", "response-id"):
-                        continue
-                    elif elem.tag == "prompt":
-                        session.add_event(PromptEvent(text=text))
-                    elif elem.tag == "notes":
-                        session.add_event(NotesEvent(text=text))
-                    elif elem.tag == "ask":
-                        session.add_event(AskEvent(text=text))
-                    elif elem.tag == "response":
-                        session.add_event(ResponseEvent(text=text))
-                    elif elem.tag == "submit":
-                        session.add_event(SubmitEvent(text=text))
-                    else:
-                        raise ValueError(f"Unknown element: {elem.tag}")
+                # Parse events from XML elements
+                self._parse_events_into_session(session, session_elem)
 
                 sessions.append(session)
 
@@ -96,20 +81,85 @@ class XmlService:
         except FileNotFoundError:
             raise ValueError(f"File not found: {file_path}")
 
-    def validate_session_xml(
-        self, xml_string: str, is_leaf: bool, is_partial: bool = False
-    ) -> bool:
+    def _parse_single_session_xml(self, xml_string: str) -> Session:
+        """Parse a single session XML string into a Session object.
+
+        Args:
+            xml_string: XML string containing a single session, possibly partial
+
+        Returns:
+            Session object parsed from XML
+
+        Raises:
+            ValueError: If XML is malformed or invalid
+        """
+        try:
+            # Handle partial XML by adding closing tag if needed
+            xml_to_parse = xml_string.strip()
+            if not xml_to_parse.endswith("</session>"):
+                xml_to_parse += "\n</session>"
+
+            root = ET.fromstring(xml_to_parse)
+
+            if root.tag != "session":
+                raise ValueError(f"Expected root element 'session', got '{root.tag}'")
+
+            # Create session with default ID (validation doesn't care about ID)
+            session = Session(session_id=0)
+
+            # Parse events from XML elements
+            self._parse_events_into_session(session, root)
+
+            return session
+
+        except ET.ParseError as e:
+            raise ValueError(f"XML parsing error: {e}")
+
+    def _parse_events_into_session(
+        self, session: Session, parent_elem: ET.Element
+    ) -> None:
+        """Parse XML elements into session events.
+
+        Args:
+            session: Session object to add events to
+            parent_elem: XML element containing event elements as children
+
+        Raises:
+            ValueError: If unknown element is encountered
+        """
+        for elem in parent_elem:
+            text = elem.text or ""
+            if elem.tag == "prompt":
+                session.add_event(PromptEvent(text=text))
+            elif elem.tag == "notes":
+                session.add_event(NotesEvent(text=text))
+            elif elem.tag == "ask":
+                session.add_event(AskEvent(text=text))
+            elif elem.tag == "response":
+                session.add_event(ResponseEvent(text=text))
+            elif elem.tag == "submit":
+                session.add_event(SubmitEvent(text=text))
+            elif elem.tag in ("response-id", "id"):
+                # Skip response-id and id elements - they're tree metadata, not events
+                continue
+            else:
+                raise ValueError(f"Unknown element: {elem.tag}")
+
+    def validate_session_xml(self, xml_string: str, is_leaf: bool) -> None:
         """Validate session XML structure.
 
         Args:
             xml_string: XML string to validate
             is_leaf: Whether this is a leaf session
-            is_partial: Whether to allow incomplete sessions
 
-        Returns:
-            True if XML is valid, False otherwise
+        Raises:
+            ValueError: If XML is invalid
         """
-        return self.xml_validator.validate_session_xml(xml_string, is_leaf, is_partial)
+        # Convert XML to Session object (may raise ValueError for malformed XML)
+        session = self._parse_single_session_xml(xml_string)
+
+        # Validate session (will automatically handle partial/complete detection)
+        self.session_validator.validate_session(session, is_leaf)
 
     def format_sessions_to_xml(
         self, sessions: List[Session], final_response: str = None

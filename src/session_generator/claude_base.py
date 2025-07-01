@@ -3,7 +3,7 @@
 import logging
 from ..llms.claude_base import call_claude_base
 from ..session import Session
-from ..xml_validator import XmlValidator
+from ..xml_service import XmlService
 from .session_generator import SessionGenerator
 
 
@@ -12,7 +12,7 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.xml_validator = XmlValidator()
+        self.xml_service = XmlService()
 
     def generate_leaf(
         self, prompt: str, session_id: int, max_retries: int = 3
@@ -100,9 +100,7 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
                 complete_xml = current_xml + continuation_text
 
                 # Validate the XML
-                self.xml_validator.get_is_xml_partial_or_fail(
-                    complete_xml, is_leaf=False
-                )
+                self.xml_service.validate_session_xml(complete_xml, is_leaf=False)
 
                 # Convert to Session object
                 return Session.from_xml(complete_xml, current_session.session_id)
@@ -135,9 +133,7 @@ class ClaudeBaseSessionGenerator(SessionGenerator):
                 )
 
                 # Validate the XML
-                self.xml_validator.get_is_xml_partial_or_fail(
-                    xml_content, is_leaf=is_leaf
-                )
+                self.xml_service.validate_session_xml(xml_content, is_leaf=is_leaf)
 
                 # Convert to Session object
                 return Session.from_xml(xml_content, session_id)

@@ -3,7 +3,7 @@
 import logging
 from ..llms.claude_chat import call_claude_chat
 from ..session import Session
-from ..xml_validator import XmlValidator
+from ..xml_service import XmlService
 from .session_generator import SessionGenerator
 
 CLI_SIMULATION_SYSTEM_PROMPT = "The assistant is in CLI simulation mode, and responds to the user's CLI commands only with the output of the command."
@@ -14,7 +14,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.xml_validator = XmlValidator()
+        self.xml_service = XmlService()
 
     def generate_leaf(
         self, prompt: str, session_id: int, max_retries: int = 3
@@ -119,10 +119,8 @@ class ClaudeChatSessionGenerator(SessionGenerator):
                 # Get complete session XML
                 complete_xml = prompt_xml + continuation_xml
 
-                # Validate the XML
-                self.xml_validator.get_is_xml_partial_or_fail(
-                    complete_xml, is_leaf=False
-                )
+                # Validate the XML (doesn't matter if it's partial or complete)
+                self.xml_service.validate_session_xml(complete_xml, is_leaf=False)
 
                 # Convert to Session object
                 return Session.from_xml(complete_xml, current_session.session_id)
@@ -154,10 +152,8 @@ class ClaudeChatSessionGenerator(SessionGenerator):
                     prompt, readme_content, examples_xml
                 )
 
-                # Validate the XML
-                self.xml_validator.get_is_xml_partial_or_fail(
-                    xml_content, is_leaf=is_leaf
-                )
+                # Validate the XML (doesn't matter if it's partial or complete)
+                self.xml_service.validate_session_xml(xml_content, is_leaf=is_leaf)
 
                 # Convert to Session object
                 return Session.from_xml(xml_content, session_id)

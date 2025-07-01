@@ -126,13 +126,14 @@ class TestXmlService:
 
     def test_validate_session_xml_integration(self, xml_service):
         """Test that XML service integrates with existing validation."""
-        # Valid leaf session
+        # Valid leaf session should not raise
         valid_leaf = "<session><prompt>Test</prompt><submit>Result</submit></session>"
-        assert xml_service.validate_session_xml(valid_leaf, is_leaf=True)
+        xml_service.validate_session_xml(valid_leaf, is_leaf=True)  # Should not raise
 
-        # Invalid session (missing submit)
-        invalid_session = "<session><prompt>Test</prompt></session>"
-        assert not xml_service.validate_session_xml(invalid_session, is_leaf=True)
+        # Invalid leaf session (missing submit)
+        partial_leaf = "<session><prompt>Test</prompt></session>"
+        with pytest.raises(ValueError):
+            xml_service.validate_session_xml(partial_leaf, is_leaf=True)
 
     def test_format_sessions_to_file_integration(self, xml_service):
         """Test that XML service integrates with formatting capabilities."""
@@ -241,24 +242,6 @@ class TestXmlService:
         sessions = xml_service.parse_sessions_file(file_path)
         assert len(sessions) == 0
 
-    def test_validate_session_xml_delegates_to_validator(self, xml_service):
-        """Test that validation properly delegates to XmlValidator."""
-        valid_xml = "<session><prompt>Test</prompt><submit>Result</submit></session>"
-        invalid_xml = "<session><prompt>Test</prompt></session>"  # Missing submit
-
-        # Should delegate to existing XmlValidator
-        assert xml_service.validate_session_xml(valid_xml, is_leaf=True) == True
-        assert xml_service.validate_session_xml(invalid_xml, is_leaf=True) == False
-
-        # Test partial validation
-        partial_xml = "<session><prompt>Test</prompt><ask>Question</ask>"
-        assert (
-            xml_service.validate_session_xml(
-                partial_xml, is_leaf=False, is_partial=True
-            )
-            == True
-        )
-
     def test_format_sessions_to_xml_includes_metadata(self, xml_service):
         """Test that formatting includes proper metadata and structure."""
         # Create Session objects
@@ -311,3 +294,129 @@ class TestXmlService:
         # Should be able to parse back the empty file
         sessions = xml_service.parse_sessions_file(output_path)
         assert len(sessions) == 0
+
+    def test_auto_detect_complete_session(self, xml_service):
+        """Test auto-detection of complete session XML."""
+        complete_xml = """
+        <session>
+            <prompt>Test task</prompt>
+            <submit>Result</submit>
+        </session>
+        """
+
+        # Should auto-detect as complete and not raise
+        xml_service.validate_session_xml(complete_xml, is_leaf=True)
+
+    def test_auto_detect_partial_session(self, xml_service):
+        """Test auto-detection of partial session XML."""
+        partial_xml = """
+        <session>
+            <prompt>Test task</prompt>
+            <ask>What should I do?</ask>
+        """
+
+        # Should auto-detect as partial and not raise
+        xml_service.validate_session_xml(partial_xml, is_leaf=False)
+
+    def test_auto_detect_malformed_xml(self, xml_service):
+        """Test auto-detection with malformed XML raises appropriate error."""
+        malformed_xml = "<session><prompt>Test<unclosed_tag>"
+
+        with pytest.raises(ValueError):
+            xml_service.validate_session_xml(malformed_xml, is_leaf=True)
+
+    def test_validate_leaf_session_valid_comprehensive(self, xml_service):
+        """Test validation of valid leaf session XML with detailed content."""
+        xml = """
+        <session>
+            <prompt>Write a story about robots</prompt>
+            <submit>Once upon a time, there was a robot named Bob...</submit>
+        </session>
+        """
+
+        # Should not raise an exception for valid XML
+        xml_service.validate_session_xml(xml, is_leaf=True)
+
+    def test_validate_leaf_session_invalid_tags(self, xml_service):
+        """Test validation fails for leaf with invalid tags."""
+        xml = """
+        <session>
+            <prompt>Write a story</prompt>
+            <notes>This shouldn't be in a leaf</notes>
+            <submit>Story content</submit>
+        </session>
+        """
+
+        with pytest.raises(ValueError):
+            xml_service.validate_session_xml(xml, is_leaf=True)
+
+    def test_validate_parent_session_valid_comprehensive(self, xml_service):
+        """Test validation of valid parent session XML with all event types."""
+        xml = """
+        <session>
+            <prompt>Write a story about robots</prompt>
+            <notes>I need to think about this</notes>
+            <ask>What type of robot?</ask>
+            <response>Friendly cleaning robot</response>
+            <submit>A story about a friendly cleaning robot</submit>
+        </session>
+        """
+
+        # Should not raise an exception for valid XML
+        xml_service.validate_session_xml(xml, is_leaf=False)
+
+    def test_validate_empty_xml_fails(self, xml_service):
+        """Test validation fails for empty XML."""
+        xml = ""
+
+        with pytest.raises(ValueError):
+            xml_service.validate_session_xml(xml, is_leaf=True)
+
+    def test_validate_non_session_root_fails(self, xml_service):
+        """Test validation fails for non-session root."""
+        xml = """
+        <document>
+            <prompt>Test</prompt>
+            <submit>Result</submit>
+        </document>
+        """
+
+        with pytest.raises(ValueError):
+            xml_service.validate_session_xml(xml, is_leaf=True)
+
+    def test_partial_xml_validation_leaf_is_not_valid(self, xml_service):
+        """Test partial leaf sessions (just prompt) are not valid."""
+        xml = """
+        <session>
+            <prompt>Test</prompt>
+        """
+
+        with pytest.raises(ValueError, match="Leaf session must have 2 events, got 1"):
+            xml_service.validate_session_xml(xml, is_leaf=True)
+
+    def test_xml_with_attributes_valid(self, xml_service):
+        """Test validation handles XML with attributes correctly."""
+        xml = """
+        <session id="123">
+            <prompt type="story">Write a story</prompt>
+            <submit format="text">Story content here</submit>
+        </session>
+        """
+
+        # Should not raise exception for XML with attributes
+        xml_service.validate_session_xml(xml, is_leaf=True)
+
+    def test_xml_with_response_id_elements_valid(self, xml_service):
+        """Test validation handles response-id elements correctly."""
+        xml = """
+        <session>
+            <prompt>Main task</prompt>
+            <ask>First question</ask>
+            <response-id>1</response-id>
+            <response>First answer</response>
+            <submit>Final result</submit>
+        </session>
+        """
+
+        # Should not raise exception for XML with response-id elements
+        xml_service.validate_session_xml(xml, is_leaf=False)
