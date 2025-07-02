@@ -16,6 +16,7 @@ class DataCollectionConfig:
     parent_examples_per_iteration: int
     max_parent_examples: int
     max_iterations: int
+    keep_seed_parent_examples: bool
 
     # Tree generation depth parameters
     sample_max_depth: int
@@ -85,6 +86,11 @@ def parse_data_collection_args() -> DataCollectionConfig:
         type=int,
         required=True,
         help="Maximum number of iterations to run",
+    )
+    parser.add_argument(
+        "--keep-seed-parent-examples",
+        action="store_true",
+        help="Keep using seed parent examples in iterations past iteration 0 (default: False)",
     )
 
     # Depth configuration
@@ -186,6 +192,7 @@ def parse_data_collection_args() -> DataCollectionConfig:
         parent_examples_per_iteration=args.parent_examples_per_iteration,
         max_parent_examples=args.max_parent_examples,
         max_iterations=args.max_iterations,
+        keep_seed_parent_examples=args.keep_seed_parent_examples,
         sample_max_depth=args.sample_max_depth,
         parent_max_depth=args.parent_max_depth,
         leaf_max_depth=args.leaf_max_depth,

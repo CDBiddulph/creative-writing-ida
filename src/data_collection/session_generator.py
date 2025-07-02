@@ -33,8 +33,9 @@ class SessionGenerator:
         self, iteration_path: Path, iteration: int
     ) -> int:
         """Count parent examples from the current iteration's parent_examples.xml file."""
-        if iteration == 0:
-            # Seed examples from the first iteration don't count toward our parent example total
+        # Seed examples from the first iteration don't count toward our parent example total
+        # unless keep_seed_parent_examples is True
+        if iteration == 0 and not self.config.keep_seed_parent_examples:
             return 0
 
         parent_examples_path = iteration_path / "examples" / "parent_examples.xml"
@@ -139,7 +140,10 @@ class SessionGenerator:
         # Generate parent sessions if needed
         if effective_parent_examples > 0:
             self._generate_parent_sessions(
-                dirs["sample_sessions"], dirs["parent_sessions"], dirs["examples"]
+                dirs["sample_sessions"],
+                dirs["parent_sessions"],
+                dirs["examples"],
+                effective_parent_examples,
             )
 
         # Generate leaf sessions from selected nodes in sample sessions
@@ -292,6 +296,7 @@ class SessionGenerator:
         sample_sessions_dir: Path,
         parent_sessions_dir: Path,
         examples_dir: Path,
+        effective_parent_examples: int,
     ) -> None:
         """Generate parent sessions from selected nodes in sample sessions."""
         raise NotImplementedError(
