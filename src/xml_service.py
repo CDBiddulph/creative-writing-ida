@@ -7,6 +7,7 @@ formatting, and example extraction.
 
 import xml.etree.ElementTree as ET
 import io
+import random
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
@@ -286,8 +287,12 @@ class XmlService:
         # Create root sessions element
         sessions_elem = ET.Element("sessions")
 
-        # Add all sessions (examples + partial)
-        for session in example_sessions + [partial_session]:
+        # Shuffle examples to randomize order for better diversity
+        shuffled_examples = example_sessions.copy()
+        random.shuffle(shuffled_examples)
+
+        # Add all sessions (shuffled examples + partial)
+        for session in shuffled_examples + [partial_session]:
             session_elem = ET.SubElement(sessions_elem, "session")
             for event in session.events:
                 event_elem = event.to_xml_element()
