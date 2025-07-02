@@ -2,7 +2,8 @@
 
 import logging
 from ..llms.claude_chat import call_claude_chat
-from ..session import Session
+from typing import List
+from ..session import Session, PromptEvent
 from ..xml_service import XmlService
 from .session_generator import SessionGenerator
 
@@ -23,13 +24,13 @@ class ClaudeChatSessionGenerator(SessionGenerator):
         try:
             # Load content
             readme_content = self._load_readme_content(self.leaf_readme_path)
-            examples_xml = self._load_examples_xml(self.leaf_examples_xml_path)
+            example_sessions = self._load_examples_sessions(self.leaf_examples_xml_path)
 
             return self._generate_session_with_validation(
                 prompt,
                 session_id,
                 readme_content,
-                examples_xml,
+                example_sessions,
                 is_leaf=True,
                 max_retries=max_retries,
             )
@@ -44,7 +45,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
         try:
             # Load content
             readme_content = self._load_readme_content(self.parent_readme_path)
-            examples_xml = self._load_examples_xml(self.parent_examples_xml_path)
+            example_sessions = self._load_examples_sessions(self.parent_examples_xml_path)
         except Exception as e:
             logging.warning(f"Failed to load files for parent generation: {e}")
             return Session(session_id=session_id, is_failed=True)
@@ -53,7 +54,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
             prompt,
             session_id,
             readme_content,
-            examples_xml,
+            example_sessions,
             is_leaf=False,
             max_retries=max_retries,
         )
@@ -65,25 +66,18 @@ class ClaudeChatSessionGenerator(SessionGenerator):
         try:
             # Load content
             readme_content = self._load_readme_content(self.parent_readme_path)
-            examples_xml = self._load_examples_xml(self.parent_examples_xml_path)
+            example_sessions = self._load_examples_sessions(self.parent_examples_xml_path)
         except Exception as e:
             logging.warning(f"Failed to load files for continue_parent: {e}")
             return Session(session_id=current_session.session_id, is_failed=True)
 
-        # Convert session to XML for the LLM
-        initial_xml = current_session.to_xml(include_closing_tag=False)
-
         # Generate continuation with validation
         for attempt in range(max_retries + 1):
             try:
-                # Build transcript content with the current state
-                transcript_content = ""
-                if examples_xml:
-                    transcript_content += examples_xml + "\n\n"
-
-                # Add the opening bracket of the next tag
-                prompt_xml = initial_xml + "\n<"
-                transcript_content += prompt_xml
+                # Format examples and current session for LLM prompt
+                transcript_content = self.xml_service.format_sessions_for_prompt(
+                    example_sessions, current_session
+                )
 
                 # Create messages showing current state
                 messages = [
@@ -107,7 +101,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
                     temperature=self.temperature,
                 )
 
-                # Combine current XML with continuation
+                # Combine current session XML with continuation
                 continuation_xml = response.text + response.stop_sequence
 
                 # If the response ends with </submit>, add </session> to close it
@@ -116,8 +110,9 @@ class ClaudeChatSessionGenerator(SessionGenerator):
 
                 logging.info(f"RESULT (continue parent): {continuation_xml}")
 
-                # Get complete session XML
-                complete_xml = prompt_xml + continuation_xml
+                # Get complete session XML by combining current session with continuation
+                current_xml = current_session.to_xml(include_closing_tag=False)
+                complete_xml = current_xml + "\n<" + continuation_xml
 
                 # Validate the XML (doesn't matter if it's partial or complete)
                 self.xml_service.validate_session_xml(complete_xml, is_leaf=False)
@@ -141,7 +136,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
         prompt: str,
         session_id: int,
         readme_content: str,
-        examples_xml: str,
+        example_sessions: List[Session],
         is_leaf: bool,
         max_retries: int,
     ) -> Session:
@@ -149,7 +144,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
         for attempt in range(max_retries + 1):
             try:
                 xml_content = self._generate_session_xml(
-                    prompt, readme_content, examples_xml
+                    prompt, readme_content, example_sessions
                 )
 
                 # Validate the XML (doesn't matter if it's partial or complete)
@@ -168,19 +163,20 @@ class ClaudeChatSessionGenerator(SessionGenerator):
                     return failed_session
 
     def _generate_session_xml(
-        self, prompt: str, readme_content: str, examples_xml: str
+        self, prompt: str, readme_content: str, example_sessions: List[Session]
     ) -> str:
         """Generate session XML using Claude Chat API."""
         # Add reference to transcripts.xml to the readme
         readme_content += "\n\nThese transcripts can be found in `transcripts.xml`."
 
-        # Build transcript content
-        transcript_content = ""
-        if examples_xml:
-            transcript_content += examples_xml + "\n\n"
-        # Add the start of the session, the prompt, and the opening bracket of the next tag
-        session_xml_start = f"<session>\n<prompt>{prompt}</prompt>\n<"
-        transcript_content += session_xml_start
+        # Create partial session with just the prompt for LLM to continue
+        partial_session = Session(session_id=0)
+        partial_session.add_event(PromptEvent(prompt))
+
+        # Format examples and partial session for LLM prompt
+        transcript_content = self.xml_service.format_sessions_for_prompt(
+            example_sessions, partial_session
+        )
 
         # Create messages
         messages = [
@@ -202,12 +198,15 @@ class ClaudeChatSessionGenerator(SessionGenerator):
             temperature=self.temperature,
         )
 
-        # Build complete XML
-        result = f"{session_xml_start}{response.text}{response.stop_sequence}"
-
+        # Build complete XML by combining partial session with continuation
+        continuation_xml = response.text + response.stop_sequence
+        
         # Only add </session> if we ended with </submit>
         if response.stop_sequence == "</submit>":
-            result += "\n</session>"
+            continuation_xml += "\n</session>"
+
+        # Create the complete session XML
+        result = f"<session>\n<prompt>{prompt}</prompt>\n<{continuation_xml}"
 
         logging.info(f"RESULT (generate session): {result}")
 

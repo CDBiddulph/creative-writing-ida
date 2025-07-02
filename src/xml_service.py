@@ -55,16 +55,17 @@ class XmlService:
                 raise ValueError(f"Expected root element 'sessions', got '{root.tag}'")
 
             sessions = []
-            for session_elem in root.findall("session"):
-                # Get session ID
+            for idx, session_elem in enumerate(root.findall("session")):
+                # Get session ID if present, otherwise use index
                 id_elem = session_elem.find("id")
-                if id_elem is None or id_elem.text is None:
-                    raise ValueError(f"Session without ID: {session_elem}")
-
-                try:
-                    session_id = int(id_elem.text)
-                except ValueError:
-                    raise ValueError(f"Invalid session ID: {id_elem.text}")
+                if id_elem is not None and id_elem.text is not None:
+                    try:
+                        session_id = int(id_elem.text)
+                    except ValueError:
+                        raise ValueError(f"Invalid session ID: {id_elem.text}")
+                else:
+                    # Use index as session ID (for example files without IDs)
+                    session_id = idx
 
                 # Create session object
                 session = Session(session_id=session_id)

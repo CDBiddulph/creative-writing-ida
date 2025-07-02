@@ -1,7 +1,10 @@
 """Interface for different API implementations (Claude or Human)."""
 
 from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import List
 from ..session import Session
+from ..xml_service import XmlService
 
 
 class SessionGenerator(ABC):
@@ -38,6 +41,7 @@ class SessionGenerator(ABC):
         self.temperature = temperature
         self.leaf_examples_xml_path = leaf_examples_xml_path
         self.parent_examples_xml_path = parent_examples_xml_path
+        self.xml_service = XmlService()
 
     @abstractmethod
     def generate_leaf(
@@ -65,10 +69,9 @@ class SessionGenerator(ABC):
         with open(readme_path, "r") as f:
             return f.read()
 
-    def _load_examples_xml(self, examples_path: str | None) -> str:
-        """Load examples XML from file or return empty string."""
+    def _load_examples_sessions(self, examples_path: str | None) -> List[Session]:
+        """Load example sessions from XML file or return empty list."""
         if examples_path is None:
-            return ""
+            return []
 
-        with open(examples_path, "r") as f:
-            return f.read()
+        return self.xml_service.parse_sessions_file(Path(examples_path))

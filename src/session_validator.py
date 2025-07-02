@@ -88,25 +88,31 @@ class SessionValidator:
         """
         expecting_response = False
 
-        for event in events:
+        for i, event in enumerate(events):
             if isinstance(event, AskEvent):
                 if expecting_response:
                     # Found another ask before response
-                    raise ValueError("Found AskEvent without matching ResponseEvent")
+                    raise ValueError(
+                        f"Found AskEvent without matching ResponseEvent: index {i} of {events}"
+                    )
                 expecting_response = True
             elif isinstance(event, ResponseEvent):
                 if not expecting_response:
                     # Found response without preceding ask
-                    raise ValueError("Found ResponseEvent without preceding AskEvent")
+                    raise ValueError(
+                        f"Found ResponseEvent without preceding AskEvent: index {i} of {events}"
+                    )
                 expecting_response = False
             elif expecting_response:
                 # Any event other than ResponseEvent while expecting response is invalid
                 event_name = event.__class__.__name__
                 raise ValueError(
-                    f"Found {event_name} after AskEvent, expected ResponseEvent"
+                    f"Found {event_name} instead of ResponseEvent after AskEvent: index {i} of {events}"
                 )
 
         # If we're still expecting a response at the end, that's invalid
         # (unless this is being called on a partial sequence)
         if expecting_response:
-            raise ValueError("Unpaired AskEvent without ResponseEvent")
+            raise ValueError(
+                f"Unpaired AskEvent without ResponseEvent: index {i} of {events}"
+            )

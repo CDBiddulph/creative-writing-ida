@@ -99,6 +99,32 @@ class TestXmlService:
         assert isinstance(session_1.events[0], PromptEvent)
         assert isinstance(session_1.events[1], SubmitEvent)
 
+    def test_parse_sessions_file_without_ids(self, xml_service):
+        """Test parsing example files without ID tags uses index as session ID."""
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
+<sessions>
+  <session>
+    <prompt>Write a story</prompt>
+    <submit>Once upon a time...</submit>
+  </session>
+  <session>
+    <prompt>Continue the story</prompt>
+    <submit>And they lived happily ever after.</submit>
+  </session>
+</sessions>"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
+            f.write(xml_content)
+            file_path = Path(f.name)
+
+        sessions = xml_service.parse_sessions_file(file_path)
+
+        assert len(sessions) == 2
+        assert sessions[0].session_id == 0  # First session gets index 0
+        assert sessions[1].session_id == 1  # Second session gets index 1
+        assert sessions[0].get_prompt_text() == "Write a story"
+        assert sessions[1].get_prompt_text() == "Continue the story"
+
     def test_parse_sessions_file_handles_malformed_xml(self, xml_service):
         """Test graceful handling of malformed XML."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
