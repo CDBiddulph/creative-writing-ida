@@ -269,3 +269,46 @@ class XmlService:
         """
         xml_content = self.format_sessions_to_xml(sessions, final_response)
         file_path.write_text(xml_content, encoding="utf-8")
+
+    def format_sessions_for_prompt(
+        self, example_sessions: List[Session], partial_session: Session
+    ) -> str:
+        """Format sessions for LLM prompt with examples and incomplete continuation.
+
+        Args:
+            example_sessions: List of complete example Session objects
+            partial_session: Partial session for LLM to continue from
+
+        Returns:
+            XML string formatted for LLM prompt with <sessions> wrapper,
+            examples, and incomplete partial session ending with '<'
+        """
+        # Create root sessions element
+        sessions_elem = ET.Element("sessions")
+
+        # Add all sessions (examples + partial)
+        for session in example_sessions + [partial_session]:
+            session_elem = ET.SubElement(sessions_elem, "session")
+            for event in session.events:
+                event_elem = event.to_xml_element()
+                session_elem.append(event_elem)
+
+        # Format and convert to string
+        self._indent(sessions_elem)
+        output = io.StringIO()
+        ET.ElementTree(sessions_elem).write(
+            output, encoding="unicode", xml_declaration=False
+        )
+
+        # Remove closing tags for continuation
+        result = output.getvalue().rstrip()
+        result = result.removesuffix("</sessions>")
+
+        # Remove last </session> tag
+        lines = result.split("\n")
+        for i in range(len(lines) - 1, -1, -1):
+            if lines[i].strip() == "</session>":
+                lines.pop(i)
+                break
+
+        return "\n".join(lines).rstrip() + "\n    <"
