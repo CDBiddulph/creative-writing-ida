@@ -87,11 +87,13 @@ class TestPromptSampler:
             sampler = PromptSampler(str(prompts_file))
             new_prompts = sampler.sample_prompts_for_iteration(exp_path, 1, 3)
 
-            # Verify it doesn't reuse 1, 3, or 5
+            # Verify it doesn't reuse 1, 3, or 5 and selects exactly 3 unique prompts
             new_indices = [idx for idx, _ in new_prompts]
+            assert len(set(new_indices)) == 3
             assert 1 not in new_indices
             assert 3 not in new_indices
             assert 5 not in new_indices
+            assert all(1 <= idx <= 10 for idx in new_indices)
 
     def test_handles_empty_prompts_file(self):
         """Test appropriate error for empty prompts file."""

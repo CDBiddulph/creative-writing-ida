@@ -293,20 +293,23 @@ class TestXmlService:
 
         xml_output = xml_service.format_sessions_to_xml(sessions)
 
-        # Should include XML declaration
-        assert xml_output.startswith("<?xml version='1.0' encoding='utf-8'?>")
-
-        # Should have sessions root
-        assert "<sessions>" in xml_output
-        assert "</sessions>" in xml_output
-
-        # Should include session IDs
-        assert "<id>0</id>" in xml_output
-        assert "<id>1</id>" in xml_output
-
-        # Should include basic session structure without response-id (that's tree-specific metadata)
-        assert "<ask>What approach?</ask>" in xml_output
-        assert "<response>Step by step</response>" in xml_output
+        expected_output = """<?xml version='1.0' encoding='utf-8'?>
+<sessions>
+  <session>
+    <id>0</id>
+    <prompt>Main task</prompt>
+    <ask>What approach?</ask>
+    <response>Step by step</response>
+    <submit>Completed task</submit>
+  </session>
+  <session>
+    <id>1</id>
+    <prompt>What approach?</prompt>
+    <submit>Step by step</submit>
+  </session>
+</sessions>
+"""
+        assert xml_output == expected_output
 
     def test_write_empty_sessions_list(self, xml_service):
         """Test that writing an empty list of sessions creates valid XML."""
@@ -320,10 +323,9 @@ class TestXmlService:
         assert output_path.exists()
         content = output_path.read_text()
 
-        # Should have XML declaration and empty sessions element
-        assert content.startswith("<?xml version='1.0' encoding='utf-8'?>")
-        assert "<sessions />" in content
-        assert "<session>" not in content  # No session elements
+        # Should have exact expected XML for empty sessions
+        expected_content = "<?xml version='1.0' encoding='utf-8'?>\n<sessions />"
+        assert content == expected_content
 
         # Should be able to parse back the empty file
         sessions = xml_service.parse_sessions_file(output_path)

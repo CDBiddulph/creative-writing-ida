@@ -276,16 +276,21 @@ class TestExperiment:
 
         command = experiment.get_final_command()
 
-        # Verify command structure
-        assert "python src/tree_runner_main.py" in command
-        assert "--model test-model" in command
-        assert "--temperature 0.7" in command
-        assert "--max-tokens 1000" in command
-        assert "--leaf-examples-xml-path" in command
-        assert "iteration_0/examples/leaf_examples.xml" in command
-        assert "--parent-examples-xml-path" in command
-        assert "iteration_0/examples/parent_examples.xml" in command
-        assert '--prompt "Your prompt here"' in command
+        # Since max_iterations=1, final iteration is 0
+        exp_path = Path(tmpdir) / "test_exp"
+        expected_command = (
+            f"python src/tree_runner_main.py "
+            f"--model {config.model} "
+            f"--max-depth {config.leaf_max_depth} "
+            f"--temperature {config.temperature} "
+            f"--max-tokens {config.max_tokens} "
+            f"--leaf-readme-path {config.leaf_readme_path} "
+            f"--parent-readme-path {config.parent_readme_path} "
+            f"--leaf-examples-xml-path {exp_path}/iteration_0/examples/leaf_examples.xml "
+            f"--parent-examples-xml-path {exp_path}/iteration_0/examples/parent_examples.xml "
+            f'--prompt "Your prompt here"'
+        )
+        assert command == expected_command
 
     def test_sample_sessions_have_correct_filenames(
         self, test_config, mock_tree_runner

@@ -199,10 +199,10 @@ class TestExampleAggregator:
             prompts = [s.find("prompt").text for s in sessions]
             submits = [s.find("submit").text for s in sessions]
 
-            assert "First prompt text" in prompts
-            assert "Second prompt text" in prompts
-            assert "First final response" in submits
-            assert "Second final response" in submits
+            expected_prompts = ["First prompt text", "Second prompt text"]
+            expected_submits = ["First final response", "Second final response"]
+            assert prompts == expected_prompts
+            assert submits == expected_submits
 
     def test_leaf_examples_only_include_prompt_and_submit(self, mock_config):
         """Test that leaf examples don't include notes, asks, or responses."""
@@ -348,15 +348,18 @@ class TestExampleAggregator:
             assert len(parent_sessions) == 3
 
             parent_prompts = [s.find("prompt").text for s in parent_sessions]
-            assert "Parent prompt iteration 0" in parent_prompts
-            assert "Parent prompt iteration 1" in parent_prompts
-            assert "Parent prompt iteration 2" in parent_prompts
+            expected_parent_prompts = [
+                "Parent prompt iteration 0",
+                "Parent prompt iteration 1",
+                "Parent prompt iteration 2",
+            ]
+            assert parent_prompts == expected_parent_prompts
 
             # Check leaf examples - should only have latest
             leaf_tree = ET.parse(iter3_path / "examples" / "leaf_examples.xml")
             leaf_sessions = leaf_tree.findall(".//session")
             assert len(leaf_sessions) == 1
-            assert "Leaf prompt 2" in leaf_sessions[0].find("prompt").text
+            assert leaf_sessions[0].find("prompt").text == "Leaf prompt 2"
 
     def test_handles_max_parent_examples_limit(self, mock_config):
         """Test that parent accumulation stops at max_parent_examples."""

@@ -236,7 +236,7 @@ class TestSession(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             session.get_ask_text()
 
-        self.assertIn("No events in session", str(cm.exception))
+        self.assertEqual(str(cm.exception), "No events in session")
 
     def test_get_ask_text_failed_session(self):
         """Test get_ask_text returns FAILED for failed session."""
@@ -270,7 +270,7 @@ class TestSession(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             session.get_submit_text()
 
-        self.assertIn("No events in session", str(cm.exception))
+        self.assertEqual(str(cm.exception), "No events in session")
 
     def test_get_submit_text_failed_session(self):
         """Test get_submit_text returns FAILED for failed session."""
