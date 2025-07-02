@@ -115,7 +115,7 @@ class TestXmlUtils(unittest.TestCase):
         # Create some sessions using xml_service
         with tempfile.NamedTemporaryFile(mode="w", suffix=".xml", delete=False) as f:
             f.write(
-                """<?xml version="1.0" encoding="UTF-8"?>
+                """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
 <session>
 <id>0</id>
@@ -133,7 +133,7 @@ class TestXmlUtils(unittest.TestCase):
         formatted_xml = xml_service.format_sessions_to_xml(sessions)
 
         # The formatted XML should be equivalent to a reference version
-        reference_xml = """<?xml version="1.0" encoding="UTF-8"?>
+        reference_xml = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
 <session>
 <id>0</id>

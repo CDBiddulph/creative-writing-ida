@@ -13,7 +13,7 @@ class TestNodeSelector:
 
     def create_sample_session_xml(self, path: Path, session_id: int = 0):
         """Helper to create a sample session XML file."""
-        xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Final response text</final-response>
   <session>
@@ -68,7 +68,7 @@ class TestNodeSelector:
 
             # Create a session with clear parent/leaf structure
             session_file = sessions_dir / "1-test.xml"
-            xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+            xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -146,7 +146,7 @@ class TestNodeSelector:
             # Create 3 separate files, each with 1 session
             for n in range(1, 4):
                 session_file = sessions_dir / f"{n}-test.xml"
-                xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+                xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>

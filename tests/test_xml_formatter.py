@@ -20,7 +20,7 @@ class TestXmlFormatter(unittest.TestCase):
         result = self.formatter.format_tree_xml(root)
 
         # Should be valid XML
-        self.assertIn('<?xml version="1.0" encoding="UTF-8"?>', result)
+        self.assertIn("<?xml version='1.0' encoding='utf-8'?>", result)
         self.assertIn("<sessions>", result)
         self.assertIn("</sessions>", result)
         self.assertIn("<id>0</id>", result)
@@ -181,7 +181,7 @@ class TestXmlFormatter(unittest.TestCase):
 
         result = self.formatter.format_tree_xml(root)
 
-        self.assertTrue(result.startswith('<?xml version="1.0" encoding="UTF-8"?>'))
+        self.assertTrue(result.startswith("<?xml version='1.0' encoding='utf-8'?>"))
 
     def test_format_tree_with_special_characters(self):
         """Test formatting handles special XML characters properly."""
@@ -208,7 +208,7 @@ class TestXmlFormatter(unittest.TestCase):
         result = self.formatter.format_tree_xml(root)
 
         # Should still produce valid XML structure
-        self.assertIn('<?xml version="1.0" encoding="UTF-8"?>', result)
+        self.assertIn("<?xml version='1.0' encoding='utf-8'?>", result)
         self.assertIn("<sessions>", result)
         self.assertIn("<id>0</id>", result)
 
@@ -220,7 +220,7 @@ class TestXmlFormatter(unittest.TestCase):
         result = self.formatter.format_tree_xml(root)
 
         # Should still create valid XML structure, possibly with FAILED content
-        self.assertIn('<?xml version="1.0" encoding="UTF-8"?>', result)
+        self.assertIn("<?xml version='1.0' encoding='utf-8'?>", result)
         self.assertIn("<sessions>", result)
         self.assertIn("<id>0</id>", result)
         self.assertIn("FAILED", result)

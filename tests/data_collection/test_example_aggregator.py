@@ -21,7 +21,7 @@ class TestExampleAggregator:
             seed_parent = Path(tmpdir) / "seed_parent.xml"
 
             seed_leaf.write_text(
-                """<?xml version="1.0" encoding="UTF-8"?>
+                """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <prompt>Seed leaf prompt</prompt>
@@ -31,7 +31,7 @@ class TestExampleAggregator:
             )
 
             seed_parent.write_text(
-                """<?xml version="1.0" encoding="UTF-8"?>
+                """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <prompt>Seed parent prompt</prompt>
@@ -66,7 +66,7 @@ class TestExampleAggregator:
 
     def create_leaf_session_xml(self, path: Path, prompt: str, final_response: str):
         """Create a leaf session XML file."""
-        xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>{final_response}</final-response>
   <session>
@@ -84,7 +84,7 @@ class TestExampleAggregator:
 
     def create_parent_session_xml(self, path: Path):
         """Create a parent session XML file."""
-        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Final response with placeholders resolved</final-response>
   <session>
@@ -215,7 +215,7 @@ class TestExampleAggregator:
             leaf_sessions.mkdir()
 
             # Create leaf session that might have complex structure
-            complex_xml = """<?xml version="1.0" encoding="UTF-8"?>
+            complex_xml = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>This is the final answer</final-response>
   <session>
@@ -313,7 +313,7 @@ class TestExampleAggregator:
                 leaf_sessions.mkdir()
 
                 # Add unique parent session for each iteration
-                parent_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+                parent_xml = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -372,7 +372,7 @@ class TestExampleAggregator:
                 parent_sessions.mkdir()
                 (iter_path / "leaf-sessions").mkdir()
 
-                parent_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+                parent_xml = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -422,7 +422,7 @@ class TestExampleAggregator:
             xml_content = (iter1_path / "examples" / "leaf_examples.xml").read_text()
 
             # Should have XML declaration
-            assert '<?xml version="1.0" encoding="UTF-8"?>' in xml_content
+            assert "<?xml version='1.0' encoding='utf-8'?>" in xml_content
 
             # Should have newlines and indentation
             assert "\n" in xml_content

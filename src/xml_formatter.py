@@ -35,14 +35,14 @@ class XmlFormatter:
         """
         Format complete tree as pretty-printed XML string ready for file output.
 
+        Traverses tree in pre-order, adds session IDs and response IDs, and formats
+        as pretty-printed XML with proper XML header.
+
         Args:
             root_node: Root TreeNode containing the complete tree
 
         Returns:
             str: Complete XML document with <sessions> root and all session elements
-
-        Traverses tree in pre-order, adds session IDs and response IDs, and formats
-        as pretty-printed XML with proper <?xml version="1.0" encoding="UTF-8"?> header.
         """
         # Create root sessions element
         sessions = ET.Element("sessions")
@@ -89,11 +89,10 @@ class XmlFormatter:
 
         # Convert to string with custom XML declaration
         output = io.StringIO()
-        output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
 
         # Write the XML content without declaration
         tree = ET.ElementTree(sessions)
-        tree.write(output, encoding="unicode", xml_declaration=False)
+        tree.write(output, encoding="unicode", xml_declaration=True)
 
         return output.getvalue()
 

@@ -26,7 +26,7 @@ class TestExperiment:
 
             leaf_examples = Path(tmpdir) / "seed_leaf.xml"
             leaf_examples.write_text(
-                """<?xml version="1.0" encoding="UTF-8"?>
+                """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <prompt>Seed leaf prompt</prompt>
@@ -37,7 +37,7 @@ class TestExperiment:
 
             parent_examples = Path(tmpdir) / "seed_parent.xml"
             parent_examples.write_text(
-                """<?xml version="1.0" encoding="UTF-8"?>
+                """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <prompt>Seed parent prompt</prompt>
@@ -103,7 +103,7 @@ class TestExperiment:
                     output_file = output_dir / filename
 
                     # Create mock session XML content
-                    xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+                    xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Generated response for: {prompt}</final-response>
   <session>

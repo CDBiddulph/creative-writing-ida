@@ -54,7 +54,7 @@ class TestSessionGenerator:
 
                 def run_and_create_file(prompt):
                     # Create XML content based on the prompt
-                    xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+                    xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Generated response for: {prompt}</final-response>
   <session>
@@ -122,7 +122,7 @@ class TestSessionGenerator:
                     output_dir.mkdir(parents=True, exist_ok=True)
                     output_file = output_dir / filename
                     output_file.write_text(
-                        f"""<?xml version="1.0" encoding="UTF-8"?>
+                        f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -191,7 +191,7 @@ class TestSessionGenerator:
                     # Create different session types based on the prompt
                     if "Write a story" in prompt:
                         # Sample session with multiple nodes for leaf selection
-                        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+                        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Story response</final-response>
   <session>
@@ -212,7 +212,7 @@ class TestSessionGenerator:
 </sessions>"""
                     else:
                         # Leaf session
-                        xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+                        xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Leaf response for: {prompt}</final-response>
   <session>
@@ -293,7 +293,7 @@ class TestSessionGenerator:
                     output_file = output_dir / filename
 
                     # Create mock session XML content
-                    xml_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+                    xml_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Generated response for: {prompt}</final-response>
   <session>
@@ -443,7 +443,7 @@ class TestSessionGenerator:
                     output_dir.mkdir(parents=True, exist_ok=True)
                     output_file = output_dir / filename
                     output_file.write_text(
-                        f"""<?xml version="1.0" encoding="UTF-8"?>
+                        f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>

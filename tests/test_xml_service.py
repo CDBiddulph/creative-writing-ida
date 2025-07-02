@@ -26,7 +26,7 @@ class TestXmlService:
     @pytest.fixture
     def sample_session_file(self):
         """Create a sample session XML file for testing."""
-        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <final-response>Complete story about robots</final-response>
   <session>
@@ -55,7 +55,7 @@ class TestXmlService:
 
         # Create multiple session files
         for i in range(3):
-            session_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+            session_content = f"""<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -110,7 +110,7 @@ class TestXmlService:
 
     def test_parse_sessions_file_handles_failed_sessions(self, xml_service):
         """Test parsing of XML with FAILED sessions."""
-        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -177,7 +177,7 @@ class TestXmlService:
 
     def test_extract_final_response_missing_returns_none(self, xml_service):
         """Test that missing final-response returns None."""
-        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -200,7 +200,7 @@ class TestXmlService:
 
     def test_parse_sessions_file_preserves_event_order(self, xml_service):
         """Test that event order is preserved when parsing sessions."""
-        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
   <session>
     <id>0</id>
@@ -238,7 +238,7 @@ class TestXmlService:
 
     def test_parse_sessions_file_handles_empty_file(self, xml_service):
         """Test handling of empty sessions file."""
-        xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+        xml_content = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
 </sessions>"""
 
@@ -267,7 +267,7 @@ class TestXmlService:
         xml_output = xml_service.format_sessions_to_xml(sessions)
 
         # Should include XML declaration
-        assert xml_output.startswith('<?xml version="1.0" encoding="UTF-8"?>')
+        assert xml_output.startswith("<?xml version='1.0' encoding='utf-8'?>")
 
         # Should have sessions root
         assert "<sessions>" in xml_output
@@ -294,7 +294,7 @@ class TestXmlService:
         content = output_path.read_text()
 
         # Should have XML declaration and empty sessions element
-        assert content.startswith('<?xml version="1.0" encoding="UTF-8"?>')
+        assert content.startswith("<?xml version='1.0' encoding='utf-8'?>")
         assert "<sessions />" in content
         assert "<session>" not in content  # No session elements
 

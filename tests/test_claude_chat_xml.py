@@ -19,8 +19,7 @@ class TestClaudeChatSessionGenerator(unittest.TestCase):
 
         # Sample content
         self.sample_readme_content = "# Test README\nThis is a test README file."
-        self.sample_examples_xml = """<?xml version="1.0" encoding="UTF-8"?>
-
+        self.sample_examples_xml = """<?xml version='1.0' encoding='utf-8'?>
 <sessions>
 <session>
 <prompt>Test prompt</prompt>

@@ -199,10 +199,9 @@ class XmlService:
 
         # Create XML string with header
         output = io.StringIO()
-        output.write('<?xml version="1.0" encoding="UTF-8"?>\n')
 
         tree = ET.ElementTree(sessions_elem)
-        tree.write(output, encoding="unicode", xml_declaration=False)
+        tree.write(output, encoding="unicode", xml_declaration=True)
 
         return output.getvalue()
 
