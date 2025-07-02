@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 
 from src.xml_service import XmlService
-from src.session import Session, PromptEvent, AskEvent, ResponseEvent, SubmitEvent
+from src.session import (
+    Session,
+    PromptEvent,
+    NotesEvent,
+    AskEvent,
+    ResponseEvent,
+    SubmitEvent,
+)
 
 
 class TestXmlService:
@@ -420,3 +427,134 @@ class TestXmlService:
 
         # Should not raise exception for XML with response-id elements
         xml_service.validate_session_xml(xml, is_leaf=False)
+
+    def test_format_sessions_for_prompt_with_partial_prompt(self, xml_service):
+        """Test formatting examples plus partial session starting with prompt."""
+        # Example session
+        example_session = Session(session_id=0)
+        example_session.add_event(PromptEvent("Write a story about robots"))
+        example_session.add_event(SubmitEvent("Once upon a time, there was a robot..."))
+
+        # Partial session to continue from
+        partial_session = Session(session_id=1)
+        partial_session.add_event(PromptEvent("Write about space"))
+
+        result = xml_service.format_sessions_for_prompt(
+            [example_session], partial_session
+        )
+
+        expected = """<sessions>
+  <session>
+    <prompt>Write a story about robots</prompt>
+    <submit>Once upon a time, there was a robot...</submit>
+  </session>
+  <session>
+    <prompt>Write about space</prompt>
+    <"""
+
+        assert result == expected
+
+    def test_format_sessions_for_prompt_multiple_examples(self, xml_service):
+        """Test formatting multiple example sessions with partial session."""
+        session1 = Session(session_id=0)
+        session1.add_event(PromptEvent("Write a story about robots"))
+        session1.add_event(AskEvent("What type of robot?"))
+        session1.add_event(ResponseEvent("Friendly cleaning robot"))
+        session1.add_event(SubmitEvent("A story about a friendly cleaning robot"))
+
+        session2 = Session(session_id=1)
+        session2.add_event(PromptEvent("What type of robot?"))
+        session2.add_event(SubmitEvent("Friendly cleaning robot"))
+
+        # Partial session to continue from
+        partial_session = Session(session_id=2)
+        partial_session.add_event(PromptEvent("Write about aliens"))
+
+        result = xml_service.format_sessions_for_prompt(
+            [session1, session2], partial_session
+        )
+
+        expected = """<sessions>
+  <session>
+    <prompt>Write a story about robots</prompt>
+    <ask>What type of robot?</ask>
+    <response>Friendly cleaning robot</response>
+    <submit>A story about a friendly cleaning robot</submit>
+  </session>
+  <session>
+    <prompt>What type of robot?</prompt>
+    <submit>Friendly cleaning robot</submit>
+  </session>
+  <session>
+    <prompt>Write about aliens</prompt>
+    <"""
+
+        assert result == expected
+
+    def test_format_sessions_for_prompt_no_examples(self, xml_service):
+        """Test formatting with no examples, just partial session."""
+        # Partial session to continue from
+        partial_session = Session(session_id=0)
+        partial_session.add_event(PromptEvent("Write a story"))
+
+        result = xml_service.format_sessions_for_prompt([], partial_session)
+
+        expected = """<sessions>
+  <session>
+    <prompt>Write a story</prompt>
+    <"""
+
+        assert result == expected
+
+    def test_format_sessions_for_prompt_preserves_content(self, xml_service):
+        """Test that content with special characters is preserved."""
+        session = Session(session_id=0)
+        session.add_event(PromptEvent('Write a story with "quotes" and <tags>'))
+        session.add_event(SubmitEvent("Once upon a time... & they lived happily."))
+
+        # Partial session with special characters
+        partial_session = Session(session_id=1)
+        partial_session.add_event(PromptEvent('More "quotes" & <symbols>'))
+
+        result = xml_service.format_sessions_for_prompt([session], partial_session)
+
+        expected = """<sessions>
+  <session>
+    <prompt>Write a story with "quotes" and &lt;tags&gt;</prompt>
+    <submit>Once upon a time... &amp; they lived happily.</submit>
+  </session>
+  <session>
+    <prompt>More "quotes" &amp; &lt;symbols&gt;</prompt>
+    <"""
+
+        assert result == expected
+
+    def test_format_sessions_for_prompt_partial_ending_with_response(self, xml_service):
+        """Test formatting with partial session ending with response for LLM to continue."""
+        # Example session
+        example_session = Session(session_id=0)
+        example_session.add_event(PromptEvent("Write a story about robots"))
+        example_session.add_event(SubmitEvent("A story about robots"))
+
+        # Partial session ending with response
+        partial_session = Session(session_id=1)
+        partial_session.add_event(PromptEvent("Write about space"))
+        partial_session.add_event(AskEvent("What should happen first?"))
+        partial_session.add_event(ResponseEvent("A spaceship lands"))
+
+        result = xml_service.format_sessions_for_prompt(
+            [example_session], partial_session
+        )
+
+        expected = """<sessions>
+  <session>
+    <prompt>Write a story about robots</prompt>
+    <submit>A story about robots</submit>
+  </session>
+  <session>
+    <prompt>Write about space</prompt>
+    <ask>What should happen first?</ask>
+    <response>A spaceship lands</response>
+    <"""
+
+        assert result == expected
