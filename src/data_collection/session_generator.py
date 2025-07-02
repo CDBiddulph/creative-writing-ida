@@ -165,6 +165,7 @@ class SessionGenerator:
             parent_readme_path=self.config.parent_readme_path,
             leaf_examples_xml_path=str(examples_dir / "leaf_examples.xml"),
             parent_examples_xml_path=str(examples_dir / "parent_examples.xml"),
+            shuffle_examples=self.config.shuffle_examples,
         )
 
     def _sanitize_prompt_for_filename(self, prompt_text: str) -> str:

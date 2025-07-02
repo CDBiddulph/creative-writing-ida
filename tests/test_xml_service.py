@@ -3,6 +3,7 @@
 import tempfile
 from pathlib import Path
 import pytest
+from unittest.mock import patch
 
 from src.xml_service import XmlService
 from src.session import (
@@ -466,7 +467,7 @@ class TestXmlService:
         partial_session.add_event(PromptEvent("Write about space"))
 
         result = xml_service.format_sessions_for_prompt(
-            [example_session], partial_session
+            [example_session], partial_session, shuffle_examples=False
         )
 
         expected = """<sessions>
@@ -497,7 +498,7 @@ class TestXmlService:
         partial_session.add_event(PromptEvent("Write about aliens"))
 
         result = xml_service.format_sessions_for_prompt(
-            [session1, session2], partial_session
+            [session1, session2], partial_session, shuffle_examples=False
         )
 
         expected = """<sessions>
@@ -523,7 +524,9 @@ class TestXmlService:
         partial_session = Session(session_id=0)
         partial_session.add_event(PromptEvent("Write a story"))
 
-        result = xml_service.format_sessions_for_prompt([], partial_session)
+        result = xml_service.format_sessions_for_prompt(
+            [], partial_session, shuffle_examples=False
+        )
 
         expected = """<sessions>
   <session>
@@ -542,7 +545,9 @@ class TestXmlService:
         partial_session = Session(session_id=1)
         partial_session.add_event(PromptEvent('More "quotes" & <symbols>'))
 
-        result = xml_service.format_sessions_for_prompt([session], partial_session)
+        result = xml_service.format_sessions_for_prompt(
+            [session], partial_session, shuffle_examples=False
+        )
 
         expected = """<sessions>
   <session>
@@ -569,7 +574,7 @@ class TestXmlService:
         partial_session.add_event(ResponseEvent("A spaceship lands"))
 
         result = xml_service.format_sessions_for_prompt(
-            [example_session], partial_session
+            [example_session], partial_session, shuffle_examples=False
         )
 
         expected = """<sessions>
@@ -584,3 +589,86 @@ class TestXmlService:
     <"""
 
         assert result == expected
+
+    @patch("src.xml_service.random.shuffle")
+    def test_format_sessions_for_prompt_shuffle_behavior(
+        self, mock_shuffle, xml_service
+    ):
+        """Test that shuffle_examples parameter shuffles the examples."""
+        # Create multiple example sessions with distinct prompts
+        session1 = Session(session_id=0)
+        session1.add_event(PromptEvent("First example"))
+        session1.add_event(SubmitEvent("First response"))
+
+        session2 = Session(session_id=1)
+        session2.add_event(PromptEvent("Second example"))
+        session2.add_event(SubmitEvent("Second response"))
+
+        session3 = Session(session_id=2)
+        session3.add_event(PromptEvent("Third example"))
+        session3.add_event(SubmitEvent("Third response"))
+
+        examples = [session1, session2, session3]
+
+        # Partial session
+        partial = Session(session_id=10)
+        partial.add_event(PromptEvent("New prompt"))
+
+        # Mock shuffle to reverse the list (guarantees a change)
+        def reverse_list(lst):
+            lst.reverse()
+
+        mock_shuffle.side_effect = reverse_list
+
+        # Test with shuffle enabled - should change order
+        result_shuffled = xml_service.format_sessions_for_prompt(
+            examples, partial, shuffle_examples=True
+        )
+
+        # Test with shuffle disabled - should keep original order
+        result_no_shuffle = xml_service.format_sessions_for_prompt(
+            examples, partial, shuffle_examples=False
+        )
+
+        result_default = xml_service.format_sessions_for_prompt(examples, partial)
+
+        # Results should be reversed when shuffle is enabled, but not when it's disabled
+        assert (
+            result_shuffled
+            == """<sessions>
+  <session>
+    <prompt>Third example</prompt>
+    <submit>Third response</submit>
+  </session>
+  <session>
+    <prompt>Second example</prompt>
+    <submit>Second response</submit>
+  </session>
+  <session>
+    <prompt>First example</prompt>
+    <submit>First response</submit>
+  </session>
+  <session>
+    <prompt>New prompt</prompt>
+    <"""
+        )
+        assert (
+            result_no_shuffle
+            == """<sessions>
+  <session>
+    <prompt>First example</prompt>
+    <submit>First response</submit>
+  </session>
+  <session>
+    <prompt>Second example</prompt>
+    <submit>Second response</submit>
+  </session>
+  <session>
+    <prompt>Third example</prompt>
+    <submit>Third response</submit>
+  </session>
+  <session>
+    <prompt>New prompt</prompt>
+    <"""
+        )
+        assert result_default == result_shuffled, "Default behavior should shuffle"

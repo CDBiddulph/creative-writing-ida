@@ -76,7 +76,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
             try:
                 # Format examples and current session for LLM prompt
                 transcript_content = self.xml_service.format_sessions_for_prompt(
-                    example_sessions, current_session
+                    example_sessions, current_session, self.shuffle_examples
                 )
 
                 # Create messages showing current state
@@ -175,7 +175,7 @@ class ClaudeChatSessionGenerator(SessionGenerator):
 
         # Format examples and partial session for LLM prompt
         transcript_content = self.xml_service.format_sessions_for_prompt(
-            example_sessions, partial_session
+            example_sessions, partial_session, self.shuffle_examples
         )
 
         # Create messages

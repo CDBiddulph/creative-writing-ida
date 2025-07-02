@@ -41,6 +41,7 @@ class DataCollectionConfig:
     max_tokens: int
     leaf_readme_path: str
     parent_readme_path: str
+    shuffle_examples: bool
 
 
 def parse_data_collection_args() -> DataCollectionConfig:
@@ -171,6 +172,11 @@ def parse_data_collection_args() -> DataCollectionConfig:
     parser.add_argument(
         "--max-tokens", type=int, required=True, help="Maximum tokens per generation"
     )
+    parser.add_argument(
+        "--no-shuffle-examples",
+        action="store_true",
+        help="Disable shuffling of examples during generation (default: shuffle enabled)"
+    )
 
     args = parser.parse_args()
 
@@ -207,4 +213,5 @@ def parse_data_collection_args() -> DataCollectionConfig:
         max_tokens=args.max_tokens,
         leaf_readme_path=args.leaf_readme_path,
         parent_readme_path=args.parent_readme_path,
+        shuffle_examples=not args.no_shuffle_examples,
     )

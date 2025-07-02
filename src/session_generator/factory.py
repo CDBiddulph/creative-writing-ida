@@ -13,6 +13,7 @@ def get_session_generator(
     temperature: float = 0.7,
     leaf_examples_xml_path: str = None,
     parent_examples_xml_path: str = None,
+    shuffle_examples: bool = True,
 ) -> SessionGenerator:
     """
     Get the appropriate API interface based on mode.
@@ -25,6 +26,7 @@ def get_session_generator(
         temperature: Temperature for generation
         leaf_examples_xml_path: Optional path to leaf examples XML
         parent_examples_xml_path: Optional path to parent examples XML
+        shuffle_examples: Whether to shuffle examples during generation
 
     Returns:
         Appropriate API interface instance
@@ -43,6 +45,7 @@ def get_session_generator(
             parent_readme_path=parent_readme_path,
             leaf_examples_xml_path=leaf_examples_xml_path,
             parent_examples_xml_path=parent_examples_xml_path,
+            shuffle_examples=shuffle_examples,
         )
     else:
         raise ValueError(f"Only chat models are supported, got: {model_type}")

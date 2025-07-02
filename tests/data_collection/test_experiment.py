@@ -75,6 +75,7 @@ class TestExperiment:
                 leaf_readme_path=str(leaf_readme),
                 parent_readme_path=str(parent_readme),
                 keep_seed_parent_examples=False,
+                shuffle_examples=True,
             )
 
             yield config, tmpdir

@@ -272,13 +272,14 @@ class XmlService:
         file_path.write_text(xml_content, encoding="utf-8")
 
     def format_sessions_for_prompt(
-        self, example_sessions: List[Session], partial_session: Session
+        self, example_sessions: List[Session], partial_session: Session, shuffle_examples: bool = True
     ) -> str:
         """Format sessions for LLM prompt with examples and incomplete continuation.
 
         Args:
             example_sessions: List of complete example Session objects
             partial_session: Partial session for LLM to continue from
+            shuffle_examples: Whether to shuffle examples for better diversity
 
         Returns:
             XML string formatted for LLM prompt with <sessions> wrapper,
@@ -287,12 +288,13 @@ class XmlService:
         # Create root sessions element
         sessions_elem = ET.Element("sessions")
 
-        # Shuffle examples to randomize order for better diversity
-        shuffled_examples = example_sessions.copy()
-        random.shuffle(shuffled_examples)
+        # Optionally shuffle examples to randomize order for better diversity
+        examples_to_use = example_sessions.copy()
+        if shuffle_examples:
+            random.shuffle(examples_to_use)
 
-        # Add all sessions (shuffled examples + partial)
-        for session in shuffled_examples + [partial_session]:
+        # Add all sessions (examples + partial)
+        for session in examples_to_use + [partial_session]:
             session_elem = ET.SubElement(sessions_elem, "session")
             for event in session.events:
                 event_elem = event.to_xml_element()

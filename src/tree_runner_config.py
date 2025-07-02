@@ -19,6 +19,7 @@ class TreeRunnerConfig:
     parent_readme_path: str  # Path to parent README file
     leaf_examples_xml_path: str = None  # Optional path to leaf examples
     parent_examples_xml_path: str = None  # Optional path to parent examples
+    shuffle_examples: bool = True  # Whether to shuffle examples during generation
 
 
 def parse_args() -> Tuple[TreeRunnerConfig, str]:
@@ -68,6 +69,11 @@ def parse_args() -> Tuple[TreeRunnerConfig, str]:
         "--parent-examples-xml-path", help="Optional path to parent examples XML file"
     )
     parser.add_argument(
+        "--no-shuffle-examples",
+        action="store_true",
+        help="Disable shuffling of examples during generation (default: shuffle enabled)"
+    )
+    parser.add_argument(
         "--prompt", required=True, help="Initial prompt for tree generation"
     )
 
@@ -91,6 +97,7 @@ def parse_args() -> Tuple[TreeRunnerConfig, str]:
         parent_readme_path=args.parent_readme_path,
         leaf_examples_xml_path=args.leaf_examples_xml_path,
         parent_examples_xml_path=args.parent_examples_xml_path,
+        shuffle_examples=not args.no_shuffle_examples,
     )
     return config, args.prompt
 
@@ -115,4 +122,5 @@ def create_session_generator(config: TreeRunnerConfig):
         temperature=config.temperature,
         leaf_examples_xml_path=config.leaf_examples_xml_path,
         parent_examples_xml_path=config.parent_examples_xml_path,
+        shuffle_examples=config.shuffle_examples,
     )

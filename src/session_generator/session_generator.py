@@ -20,6 +20,7 @@ class SessionGenerator(ABC):
         parent_readme_path: Path to parent README file
         leaf_examples_xml_path: Path to leaf examples XML file
         parent_examples_xml_path: Path to parent examples XML file
+        shuffle_examples: Whether to shuffle examples during generation
     """
 
     STOP_SEQUENCES = ["</ask>", "</submit>"]
@@ -33,6 +34,7 @@ class SessionGenerator(ABC):
         temperature: float = 0.7,
         leaf_examples_xml_path: str | None = None,
         parent_examples_xml_path: str | None = None,
+        shuffle_examples: bool = True,
     ):
         self.model = model
         self.max_tokens = max_tokens
@@ -41,6 +43,7 @@ class SessionGenerator(ABC):
         self.temperature = temperature
         self.leaf_examples_xml_path = leaf_examples_xml_path
         self.parent_examples_xml_path = parent_examples_xml_path
+        self.shuffle_examples = shuffle_examples
         self.xml_service = XmlService()
 
     @abstractmethod

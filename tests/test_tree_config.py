@@ -257,6 +257,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
             temperature=0.7,
             leaf_examples_xml_path=None,
             parent_examples_xml_path=None,
+            shuffle_examples=True,
         )
         self.assertEqual(result, mock_generator)
 
@@ -277,6 +278,7 @@ class TestCreateSessionGenerator(unittest.TestCase):
             temperature=0.7,
             leaf_examples_xml_path=None,
             parent_examples_xml_path=None,
+            shuffle_examples=True,
         )
 
     @patch("src.tree_runner_config.get_session_generator")
