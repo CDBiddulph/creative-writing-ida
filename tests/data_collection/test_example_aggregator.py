@@ -62,6 +62,7 @@ class TestExampleAggregator:
                 max_tokens=1000,
                 leaf_readme_path="leaf_readme.md",
                 parent_readme_path="parent_readme.md",
+                keep_seed_parent_examples=False,
             )
 
     def create_leaf_session_xml(self, path: Path, prompt: str, final_response: str):

@@ -108,7 +108,7 @@ class TestSessionValidator:
         session.add_event(SubmitEvent("Submission"))
 
         with pytest.raises(
-            ValueError, match="Found SubmitEvent after AskEvent, expected ResponseEvent"
+            ValueError, match="Found SubmitEvent instead of ResponseEvent after AskEvent"
         ):
             validator.validate_session(session, is_leaf=False)
 
@@ -134,7 +134,7 @@ class TestSessionValidator:
         session.add_event(SubmitEvent("Result"))
 
         with pytest.raises(
-            ValueError, match="Found NotesEvent after AskEvent, expected ResponseEvent"
+            ValueError, match="Found NotesEvent instead of ResponseEvent after AskEvent"
         ):
             validator.validate_session(session, is_leaf=False)
 

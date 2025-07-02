@@ -74,6 +74,7 @@ class TestExperiment:
                 max_tokens=1000,
                 leaf_readme_path=str(leaf_readme),
                 parent_readme_path=str(parent_readme),
+                keep_seed_parent_examples=False,
             )
 
             yield config, tmpdir

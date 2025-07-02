@@ -37,6 +37,7 @@ class TestSessionGenerator:
             max_tokens=1000,
             leaf_readme_path="leaf_readme.md",
             parent_readme_path="parent_readme.md",
+            keep_seed_parent_examples=False,
         )
 
     @pytest.fixture
